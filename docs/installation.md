@@ -1,5 +1,36 @@
 # Installation
 
+## Prerequisites: Git LFS
+
+The robot assets (`*.usd`, `*.stl`, `*.a` — see `.gitattributes`) are stored with
+[Git LFS](https://git-lfs.com). Install the LFS filters **once per machine, before cloning**:
+
+```bash
+git lfs install    # writes filter.lfs.* to ~/.gitconfig; only needed once per machine
+```
+
+Without it, `git clone` still reports success, but every LFS-tracked asset lands as a ~130-byte
+text stub instead of the real file, and Isaac Sim fails to load the robot. There is no error at
+clone time — git has no LFS filter configured, so it never asks for the real contents.
+
+Already cloned without it? Install the filters, then materialize the contents in place:
+
+```bash
+git lfs install
+git lfs fetch --all
+git lfs checkout
+```
+
+Verify at any point:
+
+```bash
+git lfs fsck --objects --pointers
+# -> Git LFS fsck OK
+
+ls -l isaaclab_flashsac/assets/g1_29dof/configuration/g1_29dof_rev_1_0_base.usd
+# -> ~28 MB. If it reads ~130 bytes, the filters are missing; run the repair above.
+```
+
 ## Development setup (no Isaac Lab)
 
 The `rsl_rl_flashsac` algorithm package works without Isaac Lab.

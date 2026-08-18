@@ -130,6 +130,11 @@ rsl_rl_flashsac
 
 ## Setup
 
+Robot assets are stored with [Git LFS](https://git-lfs.com). Run `git lfs install` **once per
+machine before cloning** — without it the `.usd` assets check out as ~130-byte stubs and Isaac
+Sim fails to load the robot, with no error at clone time. Already cloned? See
+[`docs/installation.md`](docs/installation.md#prerequisites-git-lfs) to repair in place.
+
 Training environment — one-shot install (uv venv + Isaac Sim 5.1 + Isaac Lab 2.3 + this repo):
 
 ```bash
