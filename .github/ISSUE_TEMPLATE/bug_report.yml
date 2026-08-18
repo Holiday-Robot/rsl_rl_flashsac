@@ -1,0 +1,25 @@
+name: Bug report
+description: Report a defect
+labels: [bug]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: Minimal steps or command to reproduce
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: OS, GPU, Python, torch, rsl-rl-lib, Isaac Lab / Isaac Sim versions
+    validations:
+      required: true

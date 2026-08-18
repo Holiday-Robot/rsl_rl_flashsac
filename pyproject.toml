@@ -1,0 +1,68 @@
+[project]
+name = "rsl-rl-flashsac"
+version = "0.1.0"
+description = "FlashSAC for Isaac Lab via rsl-rl: fast and stable off-policy RL for high-dimensional robot control"
+readme = "README.md"
+# Deviation from the >=3.12 default: Isaac Sim environments ship Python 3.10/3.11.
+requires-python = ">=3.10"
+license = { text = "BSD-3-Clause" }
+authors = [{ name = "Youngdo Lee" }]
+dependencies = [
+    "rsl-rl-lib>=5.4.2",
+    "torch>=2.5",
+    "tensordict>=0.13",
+    "wandb>=0.19",
+    # deploy_export.py writes the exported policy's config.yaml
+    "pyyaml>=6.0",
+]
+# NOTE: isaaclab / isaacsim are intentionally NOT dependencies; they come from the user's
+# Isaac Lab installation (scripts/install.sh or docs/installation.md).
+
+[project.scripts]
+flashsac-train = "isaaclab_flashsac.scripts.train:main"
+flashsac-play = "isaaclab_flashsac.scripts.play:main"
+flashsac-eval = "isaaclab_flashsac.scripts.eval:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["rsl_rl_flashsac", "isaaclab_flashsac"]
+
+[dependency-groups]
+dev = ["ruff>=0.9", "mypy>=1.14"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "D"]
+ignore = [
+    # Ported research code (FlashSAC / rsl_rl lineage) keeps its original docstring
+    # coverage; missing-docstring and blank-line-style rules are relaxed.
+    "D100", "D101", "D102", "D103", "D104", "D105", "D106", "D107",
+    "D203", "D205", "D213", "D401", "D413",
+]
+
+[tool.ruff.lint.per-file-ignores]
+# The Isaac Lab mdp function idiom passes SceneEntityCfg("robot") as an argument default
+# (an immutable config sentinel, used throughout upstream isaaclab); B008 is a false
+# positive for these ported observation/reward terms. Scoped to the mdp package so B008
+# stays active everywhere else.
+"isaaclab_flashsac/mdp/**/*.py" = ["B008"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "numpy"
+
+[tool.ruff.lint.isort]
+known-first-party = ["rsl_rl_flashsac", "isaaclab_flashsac"]
+
+[tool.mypy]
+# Deviation from strict: code is a faithful port of the FlashSAC reference
+# implementation; full strict-mode annotation is deferred.
+python_version = "3.12"  # dev/CI check target; runtime supports >= 3.10 (Isaac Sim)
+ignore_missing_imports = true
+check_untyped_defs = false
+exclude = ["build"]

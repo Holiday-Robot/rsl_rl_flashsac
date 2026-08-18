@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Environments
+.venv/
+.venv-*/
+.env
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Experiment artifacts
+logs/
+outputs/
+wandb/
+/videos/
+
+# Local specs/plans (agent workflow artifacts)
+docs/.local/
+
+# IDE
+.idea/
+.vscode/
+
+# Agent config (personal)
+.claude/
+
+# deployment real-G1 C++ backend (bin/build-real): out-of-source CMake
+# build dir (already covered by the generic build/ rule above, named here for
+# clarity) and the compiled pybind11 extensions it copies next to the package.
+third_party/unitree_sdk2/python_wrapper/build/
+deployment/third_party/unitree_sdk2/lib/python/

@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Format -> lint -> type check. Pass --check for CI (no mutation).
+set -euo pipefail
+cd "$(dirname "$0")/.."
+
+# Pin the project venv: never inherit a global UV_PROJECT_ENVIRONMENT that may point at
+# another project's environment. Override the location with FLASHSAC_VENV if needed.
+export UV_PROJECT_ENVIRONMENT="${FLASHSAC_VENV:-$PWD/.venv}"
+
+PKGS="rsl_rl_flashsac isaaclab_flashsac"
+
+if [[ "${1:-}" == "--check" ]]; then
+    uv run ruff format --check $PKGS
+    uv run ruff check $PKGS
+else
+    uv run ruff format $PKGS
+    uv run ruff check --fix $PKGS
+fi
+uv run mypy rsl_rl_flashsac isaaclab_flashsac

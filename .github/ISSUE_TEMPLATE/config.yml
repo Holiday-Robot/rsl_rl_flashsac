@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Discussion
+    url: https://github.com/leeyngdo/rsl_rl_flashsac/discussions
+    about: Questions and open-ended discussion
