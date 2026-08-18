@@ -1,4 +1,4 @@
-# rsl_rl_flashsac
+# RSL-RL-FlashSAC
 
 [![Project Page](https://img.shields.io/badge/Project_Page-Visit-blue.svg)](https://holiday-robot.github.io/FlashSAC/)
 [![PDF](https://img.shields.io/badge/PDF-arXiv-b31b1b.svg)](https://arxiv.org/abs/2604.04539)
@@ -158,6 +158,12 @@ flashsac-eval  --task Isaac-Velocity-Rough-G1-v0 --all_checkpoints
 `flashsac-play --export_policy` writes the deterministic policy to `<run_dir>/exported/` as TorchScript and ONNX (DreamWaQ variants additionally export `cenet.pt` plus a `config.yaml` describing the joint order and observation scales, and self-verify that the two compose to the live policy's action).
 
 Per-task configs in [`isaaclab_flashsac/rl_cfg.py`](isaaclab_flashsac/rl_cfg.py) override only the task name; everything else is the shared FlashSAC hyperparameter set. To log to [Weights & Biases](https://wandb.ai/), set `logger = {"class_name": "WandbLogWriter", "project_name": "flashsac"}` in the task cfg (entity via `WANDB_USERNAME`) — `flashsac-eval` then appends its metrics to the same W&B run.
+
+## TODOs
+
+- [ ] Deployment example
+- [ ] More robot variants
+- [ ] IsaacLab Newton backend support
 
 ## Citation
 
