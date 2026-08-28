@@ -187,14 +187,14 @@ class OffPolicyRunner(OnPolicyRunner):
             self.save(os.path.join(self.logger.log_dir, f"model_{self.current_learning_iteration}.pt"))  # type: ignore
             self.logger.stop_logging_writer()
 
-    def export_cenet_to_jit(self, path: str, filename: str = "cenet.pt") -> None:
-        """Export the policy's CENet (DreamWaQ variant) as a TorchScript file."""
+    def export_history_encoder_to_jit(self, path: str, filename: str = "history_encoder.pt") -> None:
+        """Export the policy's history encoder (Estimator variant) as a TorchScript file."""
         policy = self.alg.get_policy()
-        if not hasattr(policy, "cenet_as_jit"):
-            raise AttributeError(f"{type(policy).__name__} has no CENet; nothing to export.")
+        if not hasattr(policy, "history_encoder_as_jit"):
+            raise AttributeError(f"{type(policy).__name__} has no history encoder; nothing to export.")
         if not os.path.exists(path):
             os.makedirs(path, exist_ok=True)
-        jit_module = policy.cenet_as_jit().to("cpu")  # type: ignore[operator]
+        jit_module = policy.history_encoder_as_jit().to("cpu")  # type: ignore[operator]
         scripted = torch.jit.script(jit_module)
         scripted.save(os.path.join(path, filename))
 

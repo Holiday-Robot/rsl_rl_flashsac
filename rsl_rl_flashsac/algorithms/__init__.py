@@ -12,6 +12,6 @@
 """Learning algorithms."""
 
 from .flash_sac import FlashSAC
-from .flash_sac_dreamwaq import FlashSACDreamwaq
+from .flash_sac_estimator import FlashSACEstimator
 
-__all__ = ["FlashSAC", "FlashSACDreamwaq"]
+__all__ = ["FlashSAC", "FlashSACEstimator"]

@@ -342,7 +342,7 @@ class EnsembleCategoricalValue(nn.Module):
 class FlashSACEncoder(nn.Module):
     """FlashSAC encoder trunk: embedder + N residual blocks + unit-linear head.
 
-    Used as the DreamWaQ CENet: output (B, latent_dim) is split by the consumer
+    Used as the Estimator history encoder: output (B, latent_dim) is split by the consumer
     into a lin-vel estimation head and an unsupervised latent.
     """
 

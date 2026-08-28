@@ -9,7 +9,7 @@
 # This file contains code derived from Isaac Lab Project (BSD-3-Clause license),
 # with modifications by Holiday Robotics (BSD-3-Clause license).
 
-"""G1 DreamWaQ velocity environment configuration."""
+"""G1 Estimator velocity environment configuration."""
 
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 from isaaclab.managers import EventTermCfg as EventTerm
@@ -25,7 +25,7 @@ from isaaclab_flashsac.mdp import rewards as loco_rews
 from isaaclab_flashsac.mdp.obs import locomotion as loco_obs
 
 from .assets import G1_BEYONDMIMIC_ACTION_SCALE, G1_BEYONDMIMIC_CFG
-from .terrains import DREAMWAQ_ROUGH_TERRAINS_CFG
+from .terrains import ESTIMATOR_ROUGH_TERRAINS_CFG
 
 ##
 # Observations
@@ -33,8 +33,8 @@ from .terrains import DREAMWAQ_ROUGH_TERRAINS_CFG
 
 
 @configclass
-class DreamwaqObservationsCfg:
-    """Three-group DreamWaQ observations: actor (current), CENet (measurable), critic (privileged)."""
+class EstimatorObservationsCfg:
+    """Three-group Estimator observations: actor (current), history encoder (measurable), critic (privileged)."""
 
     @configclass
     class CurrentCfg(ObsGroup):
@@ -60,7 +60,7 @@ class DreamwaqObservationsCfg:
 
     @configclass
     class MeasurableCfg(ObsGroup):
-        # current[3:96] for 29-DoF G1: no lin_vel, no commands; 5-frame history for the CENet.
+        # current[3:96] for 29-DoF G1: no lin_vel, no commands; 5-frame history for the history encoder.
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel, noise=Unoise(n_min=-0.2, n_max=0.2))
         projected_gravity = ObsTerm(func=mdp.projected_gravity, noise=Unoise(n_min=-0.05, n_max=0.05))
         joint_pos = ObsTerm(
@@ -75,7 +75,7 @@ class DreamwaqObservationsCfg:
         actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
-            # Corruption ON: the CENet estimator consumes this history on the real robot,
+            # Corruption ON: the history encoder consumes this history on the real robot,
             # so it must be trained against sensor noise (sim2real).
             self.enable_corruption = True
             self.concatenate_terms = True
@@ -84,7 +84,7 @@ class DreamwaqObservationsCfg:
 
     @configclass
     class CriticCfg(ObsGroup):
-        # First term MUST be ground-truth lin vel (CENet supervision target).
+        # First term MUST be ground-truth lin vel (history encoder supervision target).
         base_lin_vel = ObsTerm(func=mdp.base_lin_vel)
         base_ang_vel = ObsTerm(func=mdp.base_ang_vel)
         projected_gravity = ObsTerm(func=mdp.projected_gravity)
@@ -117,7 +117,7 @@ class DreamwaqObservationsCfg:
 
 
 @configclass
-class G1DreamwaqRewards:
+class G1EstimatorRewards:
     """Stock ``Isaac-Velocity-Rough-G1-v0`` reward set on the 29-DoF BeyondMimic asset.
 
     Joint regexes are remapped for the 29-DoF asset (no fingers, torso -> waist). Tune
@@ -284,10 +284,10 @@ class G1DreamwaqRewards:
 
 
 @configclass
-class G1RoughDreamwaqEnvCfg(G1RoughEnvCfg):
-    """G1 DreamWaQ rough-terrain env: 3 obs groups + DreamWaQ rewards + domain randomization."""
+class G1RoughEstimatorEnvCfg(G1RoughEnvCfg):
+    """G1 Estimator rough-terrain env: 3 obs groups + Estimator rewards + domain randomization."""
 
-    observations: DreamwaqObservationsCfg = DreamwaqObservationsCfg()
+    observations: EstimatorObservationsCfg = EstimatorObservationsCfg()
 
     def __post_init__(self):
         super().__post_init__()
@@ -298,13 +298,13 @@ class G1RoughDreamwaqEnvCfg(G1RoughEnvCfg):
 
         # Rough-terrain curriculum: inverted-stair variants, boxes, random rough, waves, and
         # double pits on a 10x10 grid (replaces the stock Isaac Lab set).
-        self.scene.terrain.terrain_generator = DREAMWAQ_ROUGH_TERRAINS_CFG
+        self.scene.terrain.terrain_generator = ESTIMATOR_ROUGH_TERRAINS_CFG
 
         # Terminate on torso contact only.
         self.terminations.base_contact.params["sensor_cfg"].body_names = ["torso_link"]
 
         # Assigned after super().__post_init__() so the parent's mutations cannot clobber it.
-        self.rewards = G1DreamwaqRewards()
+        self.rewards = G1EstimatorRewards()
 
         # Per-joint action scale (0.25 * effort_limit / stiffness) replaces the inherited scalar
         # 0.5; the inherited joint_names=[".*"] already covers all 29 joints.
@@ -315,7 +315,7 @@ class G1RoughDreamwaqEnvCfg(G1RoughEnvCfg):
         self.commands.base_velocity.heading_command = False
         self.commands.base_velocity.ranges.lin_vel_x = (-0.6, 1.0)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        self.commands.base_velocity.ranges.ang_vel_z = (-0.5, 0.5)
+        self.commands.base_velocity.ranges.ang_vel_z = (-0.25, 0.25)
 
         # -- domain randomization
         # Physics material randomization (base default is a fixed 0.8/0.6/0.0).
@@ -355,7 +355,7 @@ class G1RoughDreamwaqEnvCfg(G1RoughEnvCfg):
 
 
 @configclass
-class G1RoughDreamwaqEnvCfg_PLAY(G1RoughDreamwaqEnvCfg):
+class G1RoughEstimatorEnvCfg_PLAY(G1RoughEstimatorEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 
@@ -383,8 +383,8 @@ class G1RoughDreamwaqEnvCfg_PLAY(G1RoughDreamwaqEnvCfg):
 
 
 @configclass
-class G1FlatDreamwaqEnvCfg(G1RoughDreamwaqEnvCfg):
-    """G1 DreamWaQ flat-terrain env (same rewards/DR; flat terrain, no height scan)."""
+class G1FlatEstimatorEnvCfg(G1RoughEstimatorEnvCfg):
+    """G1 Estimator flat-terrain env (same rewards/DR; flat terrain, no height scan)."""
 
     def __post_init__(self):
         super().__post_init__()
@@ -400,7 +400,7 @@ class G1FlatDreamwaqEnvCfg(G1RoughDreamwaqEnvCfg):
 
 
 @configclass
-class G1FlatDreamwaqEnvCfg_PLAY(G1FlatDreamwaqEnvCfg):
+class G1FlatEstimatorEnvCfg_PLAY(G1FlatEstimatorEnvCfg):
     def __post_init__(self):
         super().__post_init__()
 

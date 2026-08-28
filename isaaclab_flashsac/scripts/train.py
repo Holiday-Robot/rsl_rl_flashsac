@@ -41,7 +41,7 @@ def main() -> None:
     parser.add_argument(
         "--symmetry",
         action="store_true",
-        help="Enable left-right symmetry data augmentation (tracking tasks only; DreamWaQ tasks have it built in).",
+        help="Enable left-right symmetry data augmentation (tracking tasks only; Estimator tasks have it built in).",
     )
     parser.add_argument(
         "--mini_batch_size", type=int, default=None, help="Replay mini-batch size override (algorithm.mini_batch_size)."
@@ -68,7 +68,7 @@ def main() -> None:
     from isaaclab.utils.io import dump_yaml
     from isaaclab_tasks.utils import parse_env_cfg
 
-    import isaaclab_flashsac.envs  # noqa: F401  (registers the out-of-tree G1 DreamWaQ velocity + tracking tasks)
+    import isaaclab_flashsac.envs  # noqa: F401  (registers the out-of-tree G1 Estimator velocity + tracking tasks)
     from isaaclab_flashsac.envs.g1_wbt import apply_motion_files
     from isaaclab_flashsac.rl_cfg import G1_TRACKING_SYMMETRY_CFG, get_task_cfg
     from isaaclab_flashsac.wrapper import FlashSACVecEnvWrapper

@@ -12,7 +12,7 @@
 """Left-right symmetry tables for the Unitree G1, shared by the per-task mirrors.
 
 Joints and tracked bodies are resolved by name, so the tables survive a change in the asset's
-index order. The per-task observation-group mirrors live in :mod:`.dreamwaq` and :mod:`.wbt`.
+index order. The per-task observation-group mirrors live in :mod:`.estimator` and :mod:`.wbt`.
 """
 
 from __future__ import annotations

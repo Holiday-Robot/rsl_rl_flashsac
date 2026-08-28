@@ -26,31 +26,31 @@ except ModuleNotFoundError:
 
 if gym is not None:
     gym.register(
-        id="Isaac-Velocity-Rough-G1-Dreamwaq-v0",
+        id="Isaac-Velocity-Rough-G1-Estimator-v0",
         entry_point="isaaclab.envs:ManagerBasedRLEnv",
         disable_env_checker=True,
-        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.g1_dreamwaq.env_cfg:G1RoughDreamwaqEnvCfg"},
+        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.g1_estimator.env_cfg:G1RoughEstimatorEnvCfg"},
     )
 
     gym.register(
-        id="Isaac-Velocity-Rough-G1-Dreamwaq-Play-v0",
+        id="Isaac-Velocity-Rough-G1-Estimator-Play-v0",
         entry_point="isaaclab.envs:ManagerBasedRLEnv",
         disable_env_checker=True,
-        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.g1_dreamwaq.env_cfg:G1RoughDreamwaqEnvCfg_PLAY"},
+        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.g1_estimator.env_cfg:G1RoughEstimatorEnvCfg_PLAY"},
     )
 
     gym.register(
-        id="Isaac-Velocity-Flat-G1-Dreamwaq-v0",
+        id="Isaac-Velocity-Flat-G1-Estimator-v0",
         entry_point="isaaclab.envs:ManagerBasedRLEnv",
         disable_env_checker=True,
-        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.g1_dreamwaq.env_cfg:G1FlatDreamwaqEnvCfg"},
+        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.g1_estimator.env_cfg:G1FlatEstimatorEnvCfg"},
     )
 
     gym.register(
-        id="Isaac-Velocity-Flat-G1-Dreamwaq-Play-v0",
+        id="Isaac-Velocity-Flat-G1-Estimator-Play-v0",
         entry_point="isaaclab.envs:ManagerBasedRLEnv",
         disable_env_checker=True,
-        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.g1_dreamwaq.env_cfg:G1FlatDreamwaqEnvCfg_PLAY"},
+        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.g1_estimator.env_cfg:G1FlatEstimatorEnvCfg_PLAY"},
     )
 
     gym.register(

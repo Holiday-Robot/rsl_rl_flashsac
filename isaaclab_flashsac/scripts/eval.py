@@ -130,7 +130,7 @@ def main() -> None:
     import torch
     from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
-    import isaaclab_flashsac.envs  # noqa: F401  (registers the out-of-tree G1 DreamWaQ velocity + tracking tasks)
+    import isaaclab_flashsac.envs  # noqa: F401  (registers the out-of-tree G1 Estimator velocity + tracking tasks)
     from isaaclab_flashsac.envs.g1_wbt import apply_motion_files
     from isaaclab_flashsac.rl_cfg import get_task_cfg
     from isaaclab_flashsac.wrapper import FlashSACVecEnvWrapper

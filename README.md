@@ -37,9 +37,9 @@ upstream dependencies; this repository only adds the FlashSAC extension layers.
   </tr>
 </table>
 
-### Sim-to-Real Locomotion (Unitree G1 DreamWaQ)
+### Sim-to-Real Locomotion (Unitree G1 Estimator)
 
-Rough-terrain locomotion (`Isaac-Velocity-Rough-G1-Dreamwaq-v0`): [DreamWaQ](https://arxiv.org/abs/2301.10602)-style observations with a CENet history estimator for base velocity, trained with FlashSAC over a stair / box / wave terrain curriculum.
+Rough-terrain locomotion (`Isaac-Velocity-Rough-G1-Estimator-v0`): the policy sees proprioception only and recovers base linear velocity from an observation history encoder, trained with FlashSAC over a stair / box / wave terrain curriculum.
 
 <table>
   <tr>
@@ -49,10 +49,10 @@ Rough-terrain locomotion (`Isaac-Velocity-Rough-G1-Dreamwaq-v0`): [DreamWaQ](htt
     <th>Stair (15cm)</th>
   </tr>
   <tr>
-    <td width="25%"><img src="docs/videos/g1_dreamwaq_walk_forward.gif" alt="G1 DreamWaQ forward walking on rough terrain" width="100%"/></td>
-    <td width="25%"><img src="docs/videos/g1_dreamwaq_inplace_turn.gif" alt="G1 DreamWaQ in-place yaw turn" width="100%"/></td>
-    <td width="25%"><img src="docs/videos/g1_dreamwaq_push_recovery.gif" alt="G1 DreamWaQ push recovery" width="100%"/></td>
-    <td width="25%"><img src="docs/videos/g1_dreamwaq_stairs.gif" alt="G1 DreamWaQ stair climbing" width="100%"/></td>
+    <td width="25%"><img src="docs/videos/g1_estimator_walk_forward.gif" alt="G1 Estimator forward walking on rough terrain" width="100%"/></td>
+    <td width="25%"><img src="docs/videos/g1_estimator_inplace_turn.gif" alt="G1 Estimator in-place yaw turn" width="100%"/></td>
+    <td width="25%"><img src="docs/videos/g1_estimator_push_recovery.gif" alt="G1 Estimator push recovery" width="100%"/></td>
+    <td width="25%"><img src="docs/videos/g1_estimator_stairs.gif" alt="G1 Estimator stair climbing" width="100%"/></td>
   </tr>
 </table>
 
@@ -160,7 +160,7 @@ flashsac-play  --task Isaac-Velocity-Rough-G1-Play-v0 --num_envs 32
 flashsac-eval  --task Isaac-Velocity-Rough-G1-v0 --all_checkpoints
 ```
 
-`flashsac-play --export_policy` writes the deterministic policy to `<run_dir>/exported/` as TorchScript and ONNX (DreamWaQ variants additionally export `cenet.pt` plus a `config.yaml` describing the joint order and observation scales, and self-verify that the two compose to the live policy's action).
+`flashsac-play --export_policy` writes the deterministic policy to `<run_dir>/exported/` as TorchScript and ONNX (Estimator variants additionally export `history_encoder.pt` plus a `config.yaml` describing the joint order and observation scales, and self-verify that the two compose to the live policy's action).
 
 Per-task configs in [`isaaclab_flashsac/rl_cfg.py`](isaaclab_flashsac/rl_cfg.py) override only the task name; everything else is the shared FlashSAC hyperparameter set. To log to [Weights & Biases](https://wandb.ai/), set `logger = {"class_name": "WandbLogWriter", "project_name": "flashsac"}` in the task cfg (entity via `WANDB_USERNAME`) — `flashsac-eval` then appends its metrics to the same W&B run.
 

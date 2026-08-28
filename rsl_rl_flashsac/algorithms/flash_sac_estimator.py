@@ -9,7 +9,11 @@
 # This file contains code derived from RSL-RL Project (BSD-3-Clause license),
 # with modifications by Holiday Robotics (BSD-3-Clause license).
 
-"""DreamWaQ variant of FlashSAC: adds the CENet estimation loss."""
+"""Estimator variant of FlashSAC: adds the history-encoder estimation loss.
+
+The estimator is trained alongside the policy rather than in a separate phase, following
+concurrent state estimation (https://arxiv.org/abs/2202.05481).
+"""
 
 from __future__ import annotations
 
@@ -22,28 +26,29 @@ from rsl_rl.utils import resolve_obs_groups
 from tensordict import TensorDict
 
 from rsl_rl_flashsac.algorithms.flash_sac import FlashSAC
-from rsl_rl_flashsac.models import FlashSACActor, FlashSACCritic, FlashSACDreamwaqActor
+from rsl_rl_flashsac.models import FlashSACActor, FlashSACCritic, FlashSACEstimatorActor
 from rsl_rl_flashsac.storage import MemoryEfficientTorchUniformBuffer, TorchUniformBuffer
 from rsl_rl_flashsac.utils import resolve_callable
 
 
-class FlashSACDreamwaq(FlashSAC):
-    """FlashSAC with a DreamWaQ CENet supervised by privileged lin vel.
+class FlashSACEstimator(FlashSAC):
+    """FlashSAC with a history encoder supervised by privileged lin vel.
 
-    The CENet lives inside the actor model and already receives actor-loss
+    The history encoder lives inside the actor model and already receives actor-loss
     gradients through ``flatten_obs``; this class adds the supervision term
     ``MSE(actor_obs[:, :d], critic_obs[:, :d])`` where the critic obs group
-    must start with the ground-truth base linear velocity.
+    must start with the ground-truth base linear velocity. Concurrent state estimation:
+    https://arxiv.org/abs/2202.05481.
     """
 
-    # Narrowed from FlashSACActor: this class reads the CENet-specific attributes.
-    actor: FlashSACDreamwaqActor
+    # Narrowed from FlashSACActor: this class reads the history-encoder-specific attributes.
+    actor: FlashSACEstimatorActor
 
-    def __init__(self, *args, cenet_loss_coeff: float = 1.0, **kwargs) -> None:
+    def __init__(self, *args, history_encoder_loss_coeff: float = 1.0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.cenet_loss_coeff = cenet_loss_coeff
-        self._cenet_loss_sum = 0.0
-        self._cenet_update_count = 0
+        self.history_encoder_loss_coeff = history_encoder_loss_coeff
+        self._history_encoder_loss_sum = 0.0
+        self._history_encoder_update_count = 0
 
     def _update_actor(
         self,
@@ -70,14 +75,16 @@ class FlashSACDreamwaq(FlashSAC):
             temp_value = self.temperature().detach()
             actor_loss = (log_probs * temp_value - q).mean()
 
-            # dreamwaq: CENet supervision, added right after actor_loss is first computed.
-            # dreamwaq: actor_obs[:, :est_dim] is the CENet estimation spliced in by flatten_obs;
-            # dreamwaq: critic_obs[:, :est_dim] is the ground-truth lin vel from the critic obs group.
-            est_dim = self.actor.cenet_estimation_dim  # dreamwaq: added
-            cenet_loss = F.mse_loss(actor_obs[:, :est_dim], critic_obs[:, :est_dim].detach())  # dreamwaq: added
-            actor_loss = actor_loss + self.cenet_loss_coeff * cenet_loss  # dreamwaq: added
-            self._cenet_loss_sum += cenet_loss.item()  # dreamwaq: added
-            self._cenet_update_count += 1  # dreamwaq: added
+            # estimator: history encoder supervision, added right after actor_loss is first computed.
+            # estimator: actor_obs[:, :est_dim] is the history encoder estimation spliced in by flatten_obs;
+            # estimator: critic_obs[:, :est_dim] is the ground-truth lin vel from the critic obs group.
+            est_dim = self.actor.history_encoder_estimation_dim  # estimator: added
+            history_encoder_loss = F.mse_loss(
+                actor_obs[:, :est_dim], critic_obs[:, :est_dim].detach()
+            )  # estimator: added
+            actor_loss = actor_loss + self.history_encoder_loss_coeff * history_encoder_loss  # estimator: added
+            self._history_encoder_loss_sum += history_encoder_loss.item()  # estimator: added
+            self._history_encoder_update_count += 1  # estimator: added
 
             if self.actor_bc_alpha > 0:
                 # https://arxiv.org/abs/2306.02451
@@ -110,9 +117,9 @@ class FlashSACDreamwaq(FlashSAC):
         return actor_loss.detach(), entropy.detach()
 
     def update(self) -> dict:
-        """Perform FlashSAC updates with CENet statistics tied to actor updates."""
-        self._cenet_loss_sum = 0.0
-        self._cenet_update_count = 0
+        """Perform FlashSAC updates with history encoder statistics tied to actor updates."""
+        self._history_encoder_loss_sum = 0.0
+        self._history_encoder_update_count = 0
 
         # Wait until the buffer holds enough transitions (also required for the memory-efficient
         # buffer, whose newest n_step batches cannot be sampled yet)
@@ -143,10 +150,10 @@ class FlashSACDreamwaq(FlashSAC):
             if self.reward_normalizer is not None:
                 rewards = self.reward_normalizer.normalize_rewards(rewards)
 
-            # CENet BatchNorm statistics update only with the delayed actor update.
+            # history encoder BatchNorm statistics update only with the delayed actor update.
             if self.update_step % self.actor_update_period == 0:
-                # dreamwaq: one CENet forward over current+next, so BatchNorm sees the joint batch.
-                actor_cenet_obs_all = TensorDict(
+                # estimator: one history encoder forward over current+next, so BatchNorm sees the joint batch.
+                actor_history_encoder_obs_all = TensorDict(
                     {
                         group: torch.cat([obs_batch[group], next_obs_batch[group]], dim=0)
                         for group in (*self.actor.obs_groups, *self.actor.estimator_obs_groups)
@@ -154,7 +161,7 @@ class FlashSACDreamwaq(FlashSAC):
                     batch_size=[2 * obs_batch.batch_size[0]],
                 )
                 actor_obs, actor_next_obs = torch.chunk(
-                    self.actor.flatten_obs(actor_cenet_obs_all, training=True), 2, dim=0
+                    self.actor.flatten_obs(actor_history_encoder_obs_all, training=True), 2, dim=0
                 )
                 actor_loss, entropy = self._update_actor(actor_obs, actor_next_obs, critic_obs, actions_batch)
                 temperature_loss = self._update_temperature(entropy)
@@ -163,7 +170,7 @@ class FlashSACDreamwaq(FlashSAC):
                 mean_entropy += entropy.item()
                 num_actor_updates += 1
 
-            # Use the updated actor/CENet for the critic target without changing CENet BN stats.
+            # Use the updated actor/history encoder for the critic target without changing history encoder BN stats.
             with torch.no_grad():
                 critic_actor_next_obs = self.actor.flatten_obs(next_obs_batch, training=False)
             critic_loss = self._update_critic(
@@ -182,14 +189,14 @@ class FlashSACDreamwaq(FlashSAC):
             "critic": mean_critic_loss / num_updates,
             "temperature": mean_temperature_loss / max(num_actor_updates, 1),
             "entropy": mean_entropy / max(num_actor_updates, 1),
-            "cenet": self._cenet_loss_sum / max(self._cenet_update_count, 1),
+            "history_encoder": self._history_encoder_loss_sum / max(self._history_encoder_update_count, 1),
         }
 
     @staticmethod
     def construct_algorithm(
         obs: TensorDict, env: VecEnv, cfg: dict, device: str
-    ) -> FlashSACDreamwaq:  # dreamwaq: return type narrowed to FlashSACDreamwaq
-        """Construct the FlashSACDreamwaq algorithm with actor, critic, and replay buffer.
+    ) -> FlashSACEstimator:  # estimator: return type narrowed to FlashSACEstimator
+        """Construct the FlashSACEstimator algorithm with actor, critic, and replay buffer.
 
         Args:
             obs: Initial observations from the environment.
@@ -199,7 +206,7 @@ class FlashSACDreamwaq(FlashSAC):
 
         Returns
         -------
-            Initialized FlashSACDreamwaq algorithm instance.
+            Initialized FlashSACEstimator algorithm instance.
         """
         # Resolve class callables
         alg_class: type[FlashSAC] = resolve_callable(cfg["algorithm"].pop("class_name"))  # type: ignore
@@ -209,7 +216,7 @@ class FlashSACDreamwaq(FlashSAC):
         # Resolve observation groups
         cfg["obs_groups"] = resolve_obs_groups(
             obs, cfg["obs_groups"], ["actor", "critic", "estimator"]
-        )  # dreamwaq: added "estimator" to the default sets
+        )  # estimator: added "estimator" to the default sets
 
         # Logger compatibility (FlashSAC does not support RND)
         cfg["algorithm"].setdefault("rnd_cfg", None)
@@ -243,7 +250,7 @@ class FlashSACDreamwaq(FlashSAC):
         store_groups = sorted(
             set(cfg["obs_groups"]["actor"])
             | set(cfg["obs_groups"]["critic"])
-            | set(cfg["obs_groups"]["estimator"])  # dreamwaq: also store the CENet's estimator obs groups
+            | set(cfg["obs_groups"]["estimator"])  # estimator: also store the history encoder's estimator obs groups
         )
         buffer_obs_dtype = alg_cfg.get("buffer_obs_dtype")
         buffer_class = (
@@ -278,7 +285,7 @@ class FlashSACDreamwaq(FlashSAC):
             cfg["algorithm"]["learning_rate_decay_steps"] = int(max_iterations) * num_updates_per_iteration
 
         # Initialize the algorithm
-        alg: FlashSACDreamwaq = alg_class(  # type: ignore[assignment]  # dreamwaq: alg_class resolves to FlashSACDreamwaq (annotation updated)
+        alg: FlashSACEstimator = alg_class(  # type: ignore[assignment]  # estimator: alg_class resolves to FlashSACEstimator (annotation updated)
             actor, critic, replay_buffer, device=device, **cfg["algorithm"], multi_gpu_cfg=cfg.get("multi_gpu")
         )
 

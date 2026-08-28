@@ -9,9 +9,9 @@
 # This file contains code derived from Isaac Lab Project (BSD-3-Clause license),
 # with modifications by Holiday Robotics (BSD-3-Clause license).
 
-"""Sim2real deployment config writer and export self-verification for the G1 DreamWaQ policy.
+"""Sim2real deployment config writer and export self-verification for the G1 Estimator policy.
 
-Writes a deployment-runtime-compatible ``config.yaml`` next to the exported ``policy.pt``/``cenet.pt``
+Writes a deployment-runtime-compatible ``config.yaml`` next to the exported ``policy.pt``/``history_encoder.pt``
 TorchScript files (mirrors the reference robot-interface's config key names), and
 provides a round-trip check (:func:`verify_exported_pair`) that the two exported networks compose to
 reproduce the live policy's action -- the exact composition the deployment side performs at
@@ -135,7 +135,7 @@ def write_deploy_config(env: Any, agent_cfg: FlashSACRunnerCfg, path: str, filen
     """Write the deployment-runtime-compatible config next to the exported networks.
 
     Mirrors the key names read by the reference robot-interface's config schema
-    (``policy``/``cenet``/``obs.scales``/``clip``), plus this sim2real path's additions: an
+    (``policy``/``history_encoder``/``obs.scales``/``clip``), plus this sim2real path's additions: an
     explicit ``joint_order`` (the policy-order joint-name contract the deployment runtime uses to
     build its SDK<->policy index maps), per-joint ``lower``/``upper`` soft limits under
     ``dof_params``, ``action_bound``, and a ``provenance`` block.
@@ -144,7 +144,7 @@ def write_deploy_config(env: Any, agent_cfg: FlashSACRunnerCfg, path: str, filen
         env: The (possibly wrapped) play/training environment; ``env.unwrapped`` must expose
             ``scene["robot"]``, ``action_manager``, and ``observation_manager``.
         agent_cfg: The resolved runner configuration for this run (a
-            :class:`~isaaclab_flashsac.rl_cfg.FlashSACRunnerCfg` with a DreamWaQ actor cfg).
+            :class:`~isaaclab_flashsac.rl_cfg.FlashSACRunnerCfg` with an estimator actor cfg).
         path: Directory to write the config into (created if missing).
         filename: Output file name. Defaults to ``"config.yaml"``.
     """
@@ -164,8 +164,8 @@ def write_deploy_config(env: Any, agent_cfg: FlashSACRunnerCfg, path: str, filen
     measurement_size = measurable_dim // history_length
     dof_vel_scale = unwrapped.observation_manager.cfg.measurable.joint_vel.scale
 
-    latent_dim = agent_cfg.actor.cenet_latent_dim  # type: ignore[attr-defined]
-    estimation_dim = agent_cfg.actor.cenet_estimation_dim  # type: ignore[attr-defined]
+    latent_dim = agent_cfg.actor.history_encoder_latent_dim  # type: ignore[attr-defined]
+    estimation_dim = agent_cfg.actor.history_encoder_estimation_dim  # type: ignore[attr-defined]
 
     data = {
         "task_name": agent_cfg.experiment_name,
@@ -174,7 +174,7 @@ def write_deploy_config(env: Any, agent_cfg: FlashSACRunnerCfg, path: str, filen
             "command_size": 3,
             "num_actions": len(joint_names),
         },
-        "cenet": {
+        "history_encoder": {
             "measurement_size": measurement_size,
             "framestack": history_length,
             "latent_size": latent_dim,
@@ -202,10 +202,10 @@ def write_deploy_config(env: Any, agent_cfg: FlashSACRunnerCfg, path: str, filen
 
 
 def verify_exported_pair(policy: Any, export_dir: str, obs: TensorDict, atol: float = 1e-4) -> None:
-    """Verify that the exported ``policy.pt`` + ``cenet.pt`` reproduce the live policy's action.
+    """Verify that the exported ``policy.pt`` + ``history_encoder.pt`` reproduce the live policy's action.
 
     Loads the two freshly-exported TorchScript modules back on CPU and replays the deployment-side
-    composition: ``cenet(measurable)`` -> splice the estimation into the leading dims of ``current``
+    composition: ``history_encoder(measurable)`` -> splice the estimation into the leading dims of ``current``
     -> ``policy_jit(cat([current_spliced, latent]))``. This is compared against a CPU copy of
     ``policy`` run directly on the same observation slice (``policy.forward`` performs the identical
     splice internally, via ``flatten_obs``). ``policy`` itself is never moved or mutated -- it may
@@ -213,8 +213,8 @@ def verify_exported_pair(policy: Any, export_dir: str, obs: TensorDict, atol: fl
 
     Args:
         policy: The live policy (e.g. as returned by ``runner.alg.get_policy()``), exposing
-            ``obs_groups``, ``estimator_obs_groups``, ``cenet_estimation_dim``.
-        export_dir: Directory containing the just-exported ``policy.pt`` and ``cenet.pt``.
+            ``obs_groups``, ``estimator_obs_groups``, ``history_encoder_estimation_dim``.
+        export_dir: Directory containing the just-exported ``policy.pt`` and ``history_encoder.pt``.
         obs: A batched observation ``TensorDict`` (e.g. captured from ``env.get_observations()``).
             Only the first row is used, moved to CPU internally.
         atol: Absolute tolerance for the comparison. Defaults to 1e-4.
@@ -225,19 +225,19 @@ def verify_exported_pair(policy: Any, export_dir: str, obs: TensorDict, atol: fl
         If the exported pair's composed action disagrees with the reference beyond ``atol``.
     """
     policy_jit = torch.jit.load(os.path.join(export_dir, "policy.pt")).eval()
-    cenet_jit = torch.jit.load(os.path.join(export_dir, "cenet.pt")).eval()
+    history_encoder_jit = torch.jit.load(os.path.join(export_dir, "history_encoder.pt")).eval()
     reference_policy = copy.deepcopy(policy).cpu().eval()
 
     obs_cpu = obs[:1].cpu()
 
     with torch.inference_mode():
         measurable = torch.cat([obs_cpu[group] for group in policy.estimator_obs_groups], dim=-1)
-        cenet_out = cenet_jit(measurable)
-        estimation = cenet_out[:, : policy.cenet_estimation_dim]
-        latent = cenet_out[:, policy.cenet_estimation_dim :]
+        history_encoder_out = history_encoder_jit(measurable)
+        estimation = history_encoder_out[:, : policy.history_encoder_estimation_dim]
+        latent = history_encoder_out[:, policy.history_encoder_estimation_dim :]
 
         current = torch.cat([obs_cpu[group] for group in policy.obs_groups], dim=-1).clone()
-        current[:, : policy.cenet_estimation_dim] = estimation
+        current[:, : policy.history_encoder_estimation_dim] = estimation
         exported_action = policy_jit(torch.cat([current, latent], dim=-1))
 
         reference_action = reference_policy(obs_cpu)

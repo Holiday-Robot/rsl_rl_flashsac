@@ -18,7 +18,7 @@ from typing import Any
 from isaaclab.assets.articulation import ArticulationCfg
 from isaaclab.managers import SceneEntityCfg
 
-from isaaclab_flashsac.envs.g1_dreamwaq.assets import G1_BEYONDMIMIC_ACTION_SCALE, G1_BEYONDMIMIC_CFG
+from isaaclab_flashsac.envs.g1_estimator.assets import G1_BEYONDMIMIC_ACTION_SCALE, G1_BEYONDMIMIC_CFG
 
 ANCHOR_BODY_NAME = "torso_link"
 LOCAL_REWARD_ANCHOR_BODY_NAME = "pelvis"

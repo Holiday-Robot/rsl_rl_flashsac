@@ -69,7 +69,7 @@ def main() -> None:
     import torch
     from isaaclab_tasks.utils import get_checkpoint_path, parse_env_cfg
 
-    import isaaclab_flashsac.envs  # noqa: F401  (registers the out-of-tree G1 DreamWaQ velocity + tracking tasks)
+    import isaaclab_flashsac.envs  # noqa: F401  (registers the out-of-tree G1 Estimator velocity + tracking tasks)
     from isaaclab_flashsac.deploy_export import verify_exported_pair, write_deploy_config
     from isaaclab_flashsac.envs.g1_wbt import apply_motion_files
     from isaaclab_flashsac.rl_cfg import get_task_cfg
@@ -132,14 +132,14 @@ def main() -> None:
         runner.export_policy_to_onnx(export_dir)
         print(f"[INFO] Exported policy to: {export_dir}")
 
-        # DreamWaQ variants additionally export the CENet estimator and the sim2real deploy
+        # Estimator variants additionally export the history encoder and the sim2real deploy
         # contract (config.yaml + joint order + provenance), then self-verify that the exported
-        # policy.pt + cenet.pt compose to reproduce the live policy's action.
-        if hasattr(policy, "cenet_as_jit"):
-            runner.export_cenet_to_jit(export_dir)
+        # policy.pt + history_encoder.pt compose to reproduce the live policy's action.
+        if hasattr(policy, "history_encoder_as_jit"):
+            runner.export_history_encoder_to_jit(export_dir)
             write_deploy_config(env, agent_cfg, export_dir)
             verify_exported_pair(policy, export_dir, env.get_observations())
-            print(f"[INFO] Exported + verified cenet.pt and config.yaml to: {export_dir}")
+            print(f"[INFO] Exported + verified history_encoder.pt and config.yaml to: {export_dir}")
 
     # Roll out (a finite clip when recording, otherwise until the app is closed)
     obs = env.get_observations().to(agent_cfg.device)

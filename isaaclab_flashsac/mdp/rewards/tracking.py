@@ -9,7 +9,7 @@
 # This file contains code derived from Isaac Lab Project (BSD-3-Clause license),
 # with modifications by Holiday Robotics (BSD-3-Clause license).
 
-"""Command/gait-tracking reward terms for the G1 DreamWaQ velocity task."""
+"""Command/gait-tracking reward terms for the G1 Estimator velocity task."""
 
 from __future__ import annotations
 
