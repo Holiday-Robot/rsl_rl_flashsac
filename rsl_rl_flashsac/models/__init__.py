@@ -11,6 +11,6 @@
 
 """Neural models for FlashSAC."""
 
-from .flash_sac_model import FlashSACActor, FlashSACCritic, FlashSACDreamwaqActor, FlashSACTemperature
+from .flash_sac_model import FlashSACActor, FlashSACCritic, FlashSACEstimatorActor, FlashSACTemperature
 
-__all__ = ["FlashSACActor", "FlashSACCritic", "FlashSACDreamwaqActor", "FlashSACTemperature"]
+__all__ = ["FlashSACActor", "FlashSACCritic", "FlashSACEstimatorActor", "FlashSACTemperature"]

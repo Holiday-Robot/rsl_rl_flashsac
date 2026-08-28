@@ -9,12 +9,12 @@
 # This file contains code derived from Isaac Lab Project (BSD-3-Clause license),
 # with modifications by Holiday Robotics (BSD-3-Clause license).
 
-"""Rough-terrain generator for the G1 DreamWaQ velocity task."""
+"""Rough-terrain generator for the G1 Estimator velocity task."""
 
 import isaaclab.terrains as terrain_gen
 from isaaclab.terrains import TerrainGeneratorCfg
 
-DREAMWAQ_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
+ESTIMATOR_ROUGH_TERRAINS_CFG = TerrainGeneratorCfg(
     curriculum=True,
     size=(8.0, 8.0),
     border_width=20.0,

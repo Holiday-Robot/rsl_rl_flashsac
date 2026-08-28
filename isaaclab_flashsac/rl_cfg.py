@@ -45,23 +45,27 @@ class FlashSACActorCfg:
 
 
 @configclass
-class FlashSACDreamwaqActorCfg(FlashSACActorCfg):
-    """Configuration for the FlashSAC DreamWaQ actor (adds a CENet velocity estimator)."""
+class FlashSACEstimatorActorCfg(FlashSACActorCfg):
+    """Configuration for the FlashSAC estimator actor (adds a history-encoder velocity estimator).
 
-    class_name: str = "FlashSACDreamwaqActor"
+    The history encoder follows an RMA-like adaptation embedding (https://arxiv.org/abs/2107.04034)
+    and its velocity head follows concurrent state estimation (https://arxiv.org/abs/2202.05481).
+    """
+
+    class_name: str = "FlashSACEstimatorActor"
     """The model class name (resolved from rsl_rl_flashsac.models)."""
 
-    cenet_num_blocks: int = 2
-    """The number of residual FlashSAC blocks in the CENet."""
+    history_encoder_num_blocks: int = 2
+    """The number of residual FlashSAC blocks in the history encoder."""
 
-    cenet_hidden_dim: int = 128
-    """The hidden dimension of the CENet."""
+    history_encoder_hidden_dim: int = 128
+    """The hidden dimension of the history encoder."""
 
-    cenet_latent_dim: int = 32
-    """The dimension of the CENet's unsupervised latent (appended to the trunk input)."""
+    history_encoder_latent_dim: int = 32
+    """The dimension of the history encoder's unsupervised latent (appended to the trunk input)."""
 
-    cenet_estimation_dim: int = 3
-    """The dimension of the CENet's supervised estimation (e.g. base linear velocity), spliced
+    history_encoder_estimation_dim: int = 3
+    """The dimension of the history encoder's supervised estimation (e.g. base linear velocity), spliced
     into the first dims of the actor observation."""
 
 
@@ -185,30 +189,30 @@ class FlashSACAlgorithmCfg:
 
     symmetry_cfg: dict | None = None
     """Symmetry data augmentation config (``rsl_rl.extensions.Symmetry`` kwargs), or None to
-    disable. ``use_mirror_loss=True`` is not supported. See ``G1DreamwaqSymmetryAlgorithmCfg``
-    for the G1 DreamWaQ left-right mirror used by the tasks below."""
+    disable. ``use_mirror_loss=True`` is not supported. See ``G1EstimatorSymmetryAlgorithmCfg``
+    for the G1 Estimator left-right mirror used by the tasks below."""
 
 
 @configclass
-class FlashSACDreamwaqAlgorithmCfg(FlashSACAlgorithmCfg):
-    """Configuration for the FlashSACDreamwaq algorithm (adds the CENet supervision loss)."""
+class FlashSACEstimatorAlgorithmCfg(FlashSACAlgorithmCfg):
+    """Configuration for the FlashSACEstimator algorithm (adds the history encoder supervision loss)."""
 
-    class_name: str = "FlashSACDreamwaq"
+    class_name: str = "FlashSACEstimator"
     """The algorithm class name (resolved from rsl_rl_flashsac.algorithms)."""
 
-    cenet_loss_coeff: float = 0.1
-    """Coefficient of the CENet MSE supervision loss added to the actor loss."""
+    history_encoder_loss_coeff: float = 0.1
+    """Coefficient of the history encoder MSE supervision loss added to the actor loss."""
 
 
 @configclass
-class G1DreamwaqSymmetryAlgorithmCfg(FlashSACDreamwaqAlgorithmCfg):
-    """FlashSACDreamwaqAlgorithmCfg with the G1 left-right mirror data augmentation enabled."""
+class G1EstimatorSymmetryAlgorithmCfg(FlashSACEstimatorAlgorithmCfg):
+    """FlashSACEstimatorAlgorithmCfg with the G1 left-right mirror data augmentation enabled."""
 
     symmetry_cfg: dict = field(
         default_factory=lambda: {
             "use_data_augmentation": True,
             "use_mirror_loss": False,
-            "data_augmentation_func": "isaaclab_flashsac.mdp.obs.symmetry.g1.dreamwaq:compute_symmetric_states",
+            "data_augmentation_func": "isaaclab_flashsac.mdp.obs.symmetry.g1.estimator:compute_symmetric_states",
             "mirror_loss_coeff": 0.0,
         }
     )
@@ -401,35 +405,35 @@ class H1FlatFlashSACCfg(FlashSACRunnerCfg):
 
 
 ###############################
-# G1 DreamWaQ velocity tasks  #
+# G1 Estimator velocity tasks  #
 ###############################
-# The DreamWaQ variant swaps in the CENet actor/algorithm and adds the "estimator" obs set
+# The estimator variant swaps in the history-encoder actor/algorithm and adds the "estimator" obs set
 # (measurable obs history); action scaling uses the robot's physical joint limits rather than
 # the official FlashSAC benchmark's scalar bounds (see isaaclab_flashsac.wrapper).
 
 
 @register_task
 @configclass
-class G1RoughDreamwaqFlashSACCfg(FlashSACRunnerCfg):
-    task_name: str = "Isaac-Velocity-Rough-G1-Dreamwaq-v0"
+class G1RoughEstimatorFlashSACCfg(FlashSACRunnerCfg):
+    task_name: str = "Isaac-Velocity-Rough-G1-Estimator-v0"
     obs_groups: dict = field(
         default_factory=lambda: {"actor": ["current"], "critic": ["critic"], "estimator": ["measurable"]}
     )
     action_bound: str = "joint_limit"
-    actor: FlashSACDreamwaqActorCfg = field(default_factory=FlashSACDreamwaqActorCfg)
-    algorithm: G1DreamwaqSymmetryAlgorithmCfg = field(default_factory=G1DreamwaqSymmetryAlgorithmCfg)
+    actor: FlashSACEstimatorActorCfg = field(default_factory=FlashSACEstimatorActorCfg)
+    algorithm: G1EstimatorSymmetryAlgorithmCfg = field(default_factory=G1EstimatorSymmetryAlgorithmCfg)
 
 
 @register_task
 @configclass
-class G1FlatDreamwaqFlashSACCfg(FlashSACRunnerCfg):
-    task_name: str = "Isaac-Velocity-Flat-G1-Dreamwaq-v0"
+class G1FlatEstimatorFlashSACCfg(FlashSACRunnerCfg):
+    task_name: str = "Isaac-Velocity-Flat-G1-Estimator-v0"
     obs_groups: dict = field(
         default_factory=lambda: {"actor": ["current"], "critic": ["critic"], "estimator": ["measurable"]}
     )
     action_bound: str = "joint_limit"
-    actor: FlashSACDreamwaqActorCfg = field(default_factory=FlashSACDreamwaqActorCfg)
-    algorithm: G1DreamwaqSymmetryAlgorithmCfg = field(default_factory=G1DreamwaqSymmetryAlgorithmCfg)
+    actor: FlashSACEstimatorActorCfg = field(default_factory=FlashSACEstimatorActorCfg)
+    algorithm: G1EstimatorSymmetryAlgorithmCfg = field(default_factory=G1EstimatorSymmetryAlgorithmCfg)
 
 
 ###############################

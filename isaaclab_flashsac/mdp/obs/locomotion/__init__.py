@@ -9,7 +9,7 @@
 # This file contains code derived from Isaac Lab Project (BSD-3-Clause license),
 # with modifications by Holiday Robotics (BSD-3-Clause license).
 
-"""Locomotion observation terms for the G1 DreamWaQ velocity task."""
+"""Locomotion observation terms for the G1 Estimator velocity task."""
 
 from isaaclab_flashsac.mdp.obs.locomotion.feet_contact import feet_contact
 

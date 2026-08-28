@@ -9,7 +9,7 @@
 # This file contains code derived from Isaac Lab Project (BSD-3-Clause license),
 # with modifications by Holiday Robotics (BSD-3-Clause license).
 
-"""Left-right symmetry augmentation for the G1 DreamWaQ observation groups.
+"""Left-right symmetry augmentation for the G1 Estimator observation groups.
 
 Group layouts, with ``n`` robot joints, ``F`` history frames, and ``S`` height-scan rays:
 

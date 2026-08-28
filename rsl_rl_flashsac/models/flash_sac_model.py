@@ -115,7 +115,7 @@ class FlashSACActor(nn.Module):
 
     def flatten_obs(self, obs: TensorDict, training: bool = False) -> torch.Tensor:
         """Concatenate the active observation groups into a flat tensor."""
-        del training  # stateless in the base model; used by the DreamWaQ variant
+        del training  # stateless in the base model; used by the Estimator variant
         return torch.cat([obs[obs_group] for obs_group in self.obs_groups], dim=-1)
 
     def get_mean_and_std(self, observations: torch.Tensor, training: bool) -> tuple[torch.Tensor, torch.Tensor]:
@@ -173,13 +173,17 @@ class FlashSACActor(nn.Module):
         return _OnnxFlashSACActor(self, verbose)
 
 
-class FlashSACDreamwaqActor(FlashSACActor):
-    """FlashSAC actor with a DreamWaQ-style CENet velocity estimator.
+class FlashSACEstimatorActor(FlashSACActor):
+    """FlashSAC actor with a history-encoder velocity estimator.
 
-    The CENet consumes ``obs_groups["estimator"]`` (measurable obs history) and
+    The history encoder consumes ``obs_groups["estimator"]`` (measurable obs history) and
     outputs ``[lin-vel estimation | latent]``. ``flatten_obs`` splices the
-    estimation into the first ``cenet_estimation_dim`` dims of the actor obs
+    estimation into the first ``history_encoder_estimation_dim`` dims of the actor obs
     and appends the latent, so the trunk input is ``current_dim + latent_dim``.
+
+    The latent half is an RMA-like embedding regressed from the observation history
+    (https://arxiv.org/abs/2107.04034); the estimation half is supervised on privileged base
+    velocity while the policy trains (https://arxiv.org/abs/2202.05481).
     """
 
     def __init__(
@@ -192,29 +196,30 @@ class FlashSACDreamwaqActor(FlashSACActor):
         hidden_dim: int = 128,
         log_std_min: float = -10.0,
         log_std_max: float = 2.0,
-        cenet_num_blocks: int = 1,
-        cenet_hidden_dim: int = 128,
-        cenet_latent_dim: int = 32,
-        cenet_estimation_dim: int = 3,
+        history_encoder_num_blocks: int = 1,
+        history_encoder_hidden_dim: int = 128,
+        history_encoder_latent_dim: int = 32,
+        history_encoder_estimation_dim: int = 3,
         **kwargs,
     ) -> None:
-        """Initialize the FlashSAC DreamWaQ actor model.
+        """Initialize the FlashSAC Estimator actor model.
 
         Args:
             obs: Observation dictionary.
             obs_groups: Dictionary mapping observation sets to lists of observation groups.
-                Must include an ``"estimator"`` entry (measurable obs history for the CENet).
+                Must include an ``"estimator"`` entry (measurable obs history for the history encoder).
             obs_set: Observation set to use for this model (e.g., "actor").
             output_dim: Dimension of the action space.
             num_blocks: Number of residual FlashSAC blocks in the trunk.
             hidden_dim: Hidden dimension of the trunk.
             log_std_min: Lower bound of the Tanh-normalized log standard deviation.
             log_std_max: Upper bound of the Tanh-normalized log standard deviation.
-            cenet_num_blocks: Number of residual FlashSAC blocks in the CENet.
-            cenet_hidden_dim: Hidden dimension of the CENet.
-            cenet_latent_dim: Dimension of the CENet's unsupervised latent (appended to the trunk input).
-            cenet_estimation_dim: Dimension of the CENet's supervised estimation (e.g., linear velocity),
-                spliced into the first dims of the actor observation.
+            history_encoder_num_blocks: Number of residual FlashSAC blocks in the history encoder.
+            history_encoder_hidden_dim: Hidden dimension of the history encoder.
+            history_encoder_latent_dim: Dimension of the history encoder's unsupervised latent,
+                appended to the trunk input.
+            history_encoder_estimation_dim: Dimension of the history encoder's supervised estimation
+                (e.g., linear velocity), spliced into the first dims of the actor observation.
         """
         super().__init__(
             obs,
@@ -227,32 +232,32 @@ class FlashSACDreamwaqActor(FlashSACActor):
             log_std_max=log_std_max,
             **kwargs,
         )
-        self.cenet_estimation_dim = cenet_estimation_dim
-        self.cenet_latent_dim = cenet_latent_dim
+        self.history_encoder_estimation_dim = history_encoder_estimation_dim
+        self.history_encoder_latent_dim = history_encoder_latent_dim
         self.estimator_obs_groups, estimator_dim = _resolve_obs_dim(obs, obs_groups, "estimator")
         # The base embedder was built for self.obs_dim; the trunk consumes
         # self.obs_dim + latent_dim, so rebuild it (blocks/head are dim-agnostic).
-        self.embedder = FlashSACEmbedder(input_dim=self.obs_dim + cenet_latent_dim, hidden_dim=hidden_dim)
-        self.cenet = FlashSACEncoder(
+        self.embedder = FlashSACEmbedder(input_dim=self.obs_dim + history_encoder_latent_dim, hidden_dim=hidden_dim)
+        self.history_encoder = FlashSACEncoder(
             n_input=estimator_dim,
-            hidden_dim=cenet_hidden_dim,
-            latent_dim=cenet_estimation_dim + cenet_latent_dim,
-            num_blocks=cenet_num_blocks,
+            hidden_dim=history_encoder_hidden_dim,
+            latent_dim=history_encoder_estimation_dim + history_encoder_latent_dim,
+            num_blocks=history_encoder_num_blocks,
         )
 
     def flatten_obs(self, obs: TensorDict, training: bool = False) -> torch.Tensor:
-        """Run the CENet and splice its estimation/latent into the flattened actor observation."""
-        cenet_obs = torch.cat([obs[obs_group] for obs_group in self.estimator_obs_groups], dim=-1)
-        cenet_out = self.cenet(cenet_obs, training=training)
-        estimation = cenet_out[:, : self.cenet_estimation_dim]
-        latent = cenet_out[:, self.cenet_estimation_dim :]
+        """Run the history encoder and splice its estimation/latent into the flattened actor observation."""
+        history_encoder_obs = torch.cat([obs[obs_group] for obs_group in self.estimator_obs_groups], dim=-1)
+        history_encoder_out = self.history_encoder(history_encoder_obs, training=training)
+        estimation = history_encoder_out[:, : self.history_encoder_estimation_dim]
+        latent = history_encoder_out[:, self.history_encoder_estimation_dim :]
         actor_obs = torch.cat([obs[obs_group] for obs_group in self.obs_groups], dim=-1).clone()
-        actor_obs[:, : self.cenet_estimation_dim] = estimation
+        actor_obs[:, : self.history_encoder_estimation_dim] = estimation
         return torch.cat([actor_obs, latent], dim=-1)
 
-    def cenet_as_jit(self) -> nn.Module:
-        """Return a version of the CENet estimator compatible with Torch JIT export."""
-        return _TorchFlashSACCenet(self)
+    def history_encoder_as_jit(self) -> nn.Module:
+        """Return a version of the history encoder estimator compatible with Torch JIT export."""
+        return _TorchFlashSACHistoryEncoder(self)
 
 
 class FlashSACDoubleCritic(nn.Module):
@@ -364,7 +369,7 @@ class FlashSACCritic(nn.Module):
 
     def flatten_obs(self, obs: TensorDict, training: bool = False) -> torch.Tensor:
         """Concatenate the active observation groups into a flat tensor."""
-        del training  # stateless in the base model; used by the DreamWaQ variant
+        del training  # stateless in the base model; used by the Estimator variant
         return torch.cat([obs[obs_group] for obs_group in self.obs_groups], dim=-1)
 
     def evaluate(
@@ -443,17 +448,17 @@ class _TorchFlashSACActor(nn.Module):
         pass
 
 
-class _TorchFlashSACCenet(nn.Module):
-    """TorchScript-friendly CENet export: deterministic trunk, no training flag."""
+class _TorchFlashSACHistoryEncoder(nn.Module):
+    """TorchScript-friendly history encoder export: deterministic trunk, no training flag."""
 
-    def __init__(self, policy: FlashSACDreamwaqActor) -> None:
+    def __init__(self, policy: FlashSACEstimatorActor) -> None:
         super().__init__()
-        cenet = copy.deepcopy(policy.cenet)
-        self.embedder = cenet.embedder
-        self.encoder = cenet.encoder
-        self.post_norm = cenet.post_norm
-        self.predictor_weight = nn.Parameter(cenet.predictor.w.weight.detach().clone())
-        self.predictor_bias = nn.Parameter(cenet.predictor_bias.detach().clone())
+        history_encoder = copy.deepcopy(policy.history_encoder)
+        self.embedder = history_encoder.embedder
+        self.encoder = history_encoder.encoder
+        self.post_norm = history_encoder.post_norm
+        self.predictor_weight = nn.Parameter(history_encoder.predictor.w.weight.detach().clone())
+        self.predictor_bias = nn.Parameter(history_encoder.predictor_bias.detach().clone())
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = self.embedder(x, False)
@@ -485,7 +490,7 @@ class _OnnxFlashSACActor(nn.Module):
         self.register_buffer("action_bias", model.predictor.action_bias.detach().clone())
         self.register_buffer("action_scale", model.predictor.action_scale.detach().clone())
         # Derive the dummy input size from the actual trunk (embedder), not from re-resolving
-        # obs group dims: DreamWaQ variants rebuild the embedder for obs_dim + cenet_latent_dim,
+        # obs group dims: Estimator variants rebuild the embedder for obs_dim + history_encoder_latent_dim,
         # so model.obs_dim alone would be stale/wrong here.
         self.input_size = self.embedder.norm.running_mean.shape[-1]
 

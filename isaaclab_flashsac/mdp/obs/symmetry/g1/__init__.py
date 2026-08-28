@@ -11,11 +11,11 @@
 
 """Left-right symmetry for the Unitree G1.
 
-:mod:`.base` holds the joint/body tables both tasks share; :mod:`.dreamwaq` and :mod:`.wbt`
+:mod:`.base` holds the joint/body tables both tasks share; :mod:`.estimator` and :mod:`.wbt`
 hold the per-task observation-group mirrors, each exposing ``compute_symmetric_states``.
 """
 
-from isaaclab_flashsac.mdp.obs.symmetry.g1 import base, dreamwaq, wbt
+from isaaclab_flashsac.mdp.obs.symmetry.g1 import base, estimator, wbt
 from isaaclab_flashsac.mdp.obs.symmetry.g1.base import (
     G1SymmetryCache,
     get_symmetry_cache,
@@ -26,7 +26,7 @@ from isaaclab_flashsac.mdp.obs.symmetry.g1.base import (
 __all__ = [
     "G1SymmetryCache",
     "base",
-    "dreamwaq",
+    "estimator",
     "get_symmetry_cache",
     "switch_g1_joints_left_right",
     "switch_tracked_bodies_left_right",
