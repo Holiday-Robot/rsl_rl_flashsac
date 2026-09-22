@@ -27,7 +27,7 @@ from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as Gnoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab_tasks.manager_based.manipulation.inhand.inhand_env_cfg import InHandObjectEnvCfg
 
-from isaaclab_flashsac.mdp import commands, events
+from isaaclab_flashsac.mdp import commands, events, rewards
 from isaaclab_flashsac.mdp.obs import inhand
 
 from .assets import XHAND_RIGHT_CFG
@@ -123,9 +123,10 @@ class XHandRewardsCfg:
     )
 
     # -- penalties
-    joint_vel_l2 = RewTerm(
-        func=mdp.joint_vel_l2, weight=-2.5e-3
-    )  # 100x upstream: at -2.5e-5 it cost 0.002 of a 69 return
+    # 100x upstream: at -2.5e-5 the velocity penalty cost 0.002 of a 69 return
+    joint_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-2.5e-3)
+    # mechanical power ||tau * qdot||, about 5 % of the return at the measured 0.34 N m and 3.4 rad/s
+    joint_power = RewTerm(func=rewards.energy, weight=-5e-3)
     action_l2 = RewTerm(func=mdp.action_l2, weight=-0.0001)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
     # dropping the cube costs one success bonus; timeouts are not penalized
