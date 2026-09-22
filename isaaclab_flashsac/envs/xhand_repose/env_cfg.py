@@ -123,7 +123,9 @@ class XHandRewardsCfg:
     )
 
     # -- penalties
-    joint_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-2.5e-5)
+    joint_vel_l2 = RewTerm(
+        func=mdp.joint_vel_l2, weight=-2.5e-3
+    )  # 100x upstream: at -2.5e-5 it cost 0.002 of a 69 return
     action_l2 = RewTerm(func=mdp.action_l2, weight=-0.0001)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
     # dropping the cube costs one success bonus; timeouts are not penalized
@@ -217,8 +219,11 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
             "yaw": (-math.pi, math.pi),
         }
 
-        # -- action: upstream EMAJointPositionToLimits stays (absolute targets over the joint range, EMA 0.95).
-        # Relative 0.05 rad deltas capped the joint torque at kp * 0.05 and the policy only rocked the cube
+        # -- action: upstream EMAJointPositionToLimits (absolute targets over the joint range). Relative
+        # 0.05 rad deltas capped the joint torque at kp * 0.05 and the policy only rocked the cube.
+        # alpha 0.5 instead of upstream's 0.95: at 0.95 the target jumped up to 2.45 rad per 50 ms step
+        # (the range is 1.9) and the joints ran into their 14.4 rad/s ceiling
+        self.actions.joint_pos.alpha = 0.5
 
 
 @configclass
