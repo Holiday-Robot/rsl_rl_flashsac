@@ -17,7 +17,7 @@ from typing import TYPE_CHECKING, Literal
 
 import isaaclab.utils.math as math_utils
 import torch
-from isaaclab.assets import Articulation
+from isaaclab.assets import Articulation, RigidObject
 from isaaclab.envs.mdp.events import _randomize_prop_by_op
 from isaaclab.managers import SceneEntityCfg
 
@@ -86,7 +86,8 @@ def randomize_rigid_body_com(
     """Randomize the center of mass (CoM) of rigid bodies.
 
     A random value sampled from the given per-axis ranges is added to the current CoM
-    of the selected bodies.
+    of the selected bodies. Works on an articulation (per selected body) and on a rigid
+    object (its single body).
 
     Note:
         This function uses CPU tensors to assign the CoM. It is recommended to use this
@@ -97,10 +98,10 @@ def randomize_rigid_body_com(
         env_ids: Indices of the environments to randomize, or ``None`` for all envs.
         com_range: Mapping from axis name (``"x"``, ``"y"``, ``"z"``) to a ``(min, max)``
             range from which the CoM offset is sampled. Missing axes default to ``(0.0, 0.0)``.
-        asset_cfg: Scene entity configuration selecting the articulation and bodies.
+        asset_cfg: Scene entity configuration selecting the asset and, for an articulation, its bodies.
     """
     # extract the used quantities (to enable type-hinting)
-    asset: Articulation = env.scene[asset_cfg.name]
+    asset: Articulation | RigidObject = env.scene[asset_cfg.name]
     # resolve environment ids
     if env_ids is None:
         env_ids = torch.arange(env.scene.num_envs, device="cpu")
@@ -118,11 +119,14 @@ def randomize_rigid_body_com(
     ranges = torch.tensor(range_list, device="cpu")
     rand_samples = math_utils.sample_uniform(ranges[:, 0], ranges[:, 1], (len(env_ids), 3), device="cpu").unsqueeze(1)
 
-    # get the current com of the bodies (num_assets, num_bodies)
+    # current CoMs: (num_assets, num_bodies, 7) for an articulation, (num_assets, 7) for a rigid object
     coms = asset.root_physx_view.get_coms().clone()
 
     # Randomize the com in range
-    coms[:, body_ids, :3] += rand_samples
+    if coms.dim() == 2:
+        coms[env_ids, :3] += rand_samples.squeeze(1)
+    else:
+        coms[:, body_ids, :3] += rand_samples
 
     # Set the new coms
     asset.root_physx_view.set_coms(coms, env_ids)

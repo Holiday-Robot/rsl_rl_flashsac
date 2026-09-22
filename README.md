@@ -88,7 +88,7 @@ Pose reaching on a Franka Research 3 (`Isaac-Reach-Franka-v0`): the stock Isaac 
 
 ### In-Hand Cube Reorientation (XHand1)
 
-Cube reorientation on the 12-DoF RoboEra XHand1 right hand (`Isaac-Repose-Cube-XHand-v0`): Isaac Lab's Repose-Cube task with delta joint-target actions, a non-privileged policy observation (noisy joint angles and palm-frame cube pose with history) and a privileged critic, and [dexscrew](https://github.com/x-robotics-lab/dexscrew)'s XHand1 physics parameters.
+Reorientation of Holiday's 40.95 mm marker cube on the 12-DoF RoboEra XHand1 right hand (`Isaac-Repose-Cube-XHand-v0`): Isaac Lab's Repose-Cube task with delta joint-target actions, a non-privileged policy observation (noisy joint angles and palm-frame cube pose with history) and a privileged critic, the marker cube's training-time randomization (per-axis scale, spawn pose, centre of mass), and [dexscrew](https://github.com/x-robotics-lab/dexscrew)'s XHand1 physics parameters.
 
 ## Benchmark
 
