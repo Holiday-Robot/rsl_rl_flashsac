@@ -108,7 +108,7 @@ class XHandObservationsCfg:
 
 @configclass
 class XHandRewardsCfg:
-    """Isaac Lab's in-hand reorientation reward set, values unchanged. Tune here."""
+    """Isaac Lab's in-hand reorientation reward set plus a drop penalty. Tune here."""
 
     # -- task
     track_orientation_inv_l2 = RewTerm(
@@ -126,6 +126,10 @@ class XHandRewardsCfg:
     joint_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-2.5e-5)
     action_l2 = RewTerm(func=mdp.action_l2, weight=-0.0001)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    # dropping the cube costs one success bonus; timeouts are not penalized
+    object_away_penalty = RewTerm(
+        func=mdp.is_terminated_term, weight=-250.0, params={"term_keys": "object_out_of_reach"}
+    )
 
 
 ##
