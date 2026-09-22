@@ -11,6 +11,7 @@
 
 """Command terms (require Isaac Lab at import time)."""
 
+from isaaclab_flashsac.mdp.commands.inhand import ReorientWithFramesCommand, ReorientWithFramesCommandCfg
 from isaaclab_flashsac.mdp.commands.motion import MotionCommand, MotionCommandCfg
 
-__all__ = ["MotionCommand", "MotionCommandCfg"]
+__all__ = ["MotionCommand", "MotionCommandCfg", "ReorientWithFramesCommand", "ReorientWithFramesCommandCfg"]

@@ -27,7 +27,7 @@ from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as Gnoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab_tasks.manager_based.manipulation.inhand.inhand_env_cfg import InHandObjectEnvCfg
 
-from isaaclab_flashsac.mdp import events
+from isaaclab_flashsac.mdp import commands, events
 from isaaclab_flashsac.mdp.obs import inhand
 
 from .assets import XHAND_RIGHT_CFG
@@ -161,11 +161,19 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
         self.scene.object.spawn.usd_path = _QUAD_CUBE_USD_PATH
         self.scene.object.spawn.mass_props = sim_utils.MassPropertiesCfg(mass=0.024)  # kg, fixed in training
         self.scene.object.init_state.pos = (0.07, 0.005, 0.56)  # env frame, m
-        self.commands.object_pose.goal_pose_visualizer_cfg.markers["goal"].usd_path = _QUAD_CUBE_USD_PATH
 
-        # -- goal: resting center = palm plane 0.525 m + half edge; 0.2 rad is Allegro's tolerance (Shadow uses 0.1)
-        self.commands.object_pose.init_pos_offset = (0.0, 0.0, -0.0145)
-        self.commands.object_pose.orientation_success_threshold = 0.2
+        # -- goal: resting center = palm plane 0.525 m + half edge; 0.2 rad is Allegro's tolerance (Shadow uses 0.1).
+        # The debug visualization draws the goal cube plus axis frames on the object and the goal
+        self.commands.object_pose = commands.ReorientWithFramesCommandCfg(
+            asset_name="object",
+            init_pos_offset=(0.0, 0.0, -0.0145),
+            update_goal_on_success=True,
+            orientation_success_threshold=0.2,
+            make_quat_unique=False,
+            marker_pos_offset=(-0.2, -0.06, 0.08),
+            debug_vis=True,
+        )
+        self.commands.object_pose.goal_pose_visualizer_cfg.markers["goal"].usd_path = _QUAD_CUBE_USD_PATH
 
         # -- object randomization from the marker-cube training config (holiday finger policy)
         # per-axis aspect scale: the policy never sees a perfect cube (33 to 49 mm edges)
