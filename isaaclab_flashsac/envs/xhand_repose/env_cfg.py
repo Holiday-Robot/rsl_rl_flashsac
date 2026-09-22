@@ -135,7 +135,7 @@ class XHandRewardsCfg:
 
 @configclass
 class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
-    """Isaac Lab's in-hand reorientation task on the XHand1 with a non-privileged actor and delta actions."""
+    """Isaac Lab's in-hand reorientation task on the XHand1 with a non-privileged actor."""
 
     observations: XHandObservationsCfg = XHandObservationsCfg()
     rewards: XHandRewardsCfg = XHandRewardsCfg()
@@ -213,10 +213,8 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
             "yaw": (-math.pi, math.pi),
         }
 
-        # -- action: targets move by up to 0.05 rad per step from the measured joint position (dexscrew's step)
-        self.actions.joint_pos = mdp.RelativeJointPositionActionCfg(
-            asset_name="robot", joint_names=[".*"], scale=0.05, use_zero_offset=True
-        )
+        # -- action: upstream EMAJointPositionToLimits stays (absolute targets over the joint range, EMA 0.95).
+        # Relative 0.05 rad deltas capped the joint torque at kp * 0.05 and the policy only rocked the cube
 
 
 @configclass

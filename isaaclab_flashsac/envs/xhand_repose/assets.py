@@ -21,7 +21,7 @@ from isaaclab.sim.converters import UrdfConverterCfg
 
 _XHAND_RIGHT_URDF_PATH = str(Path(__file__).resolve().parents[2] / "assets" / "xhand_right" / "xhand_right.urdf")
 
-# Gains and joint dynamics follow dexscrew's XHand1 PhysX setup
+# Stiffness and joint dynamics follow dexscrew's XHand1 PhysX setup
 # (x-robotics-lab/dexscrew: configs/task/XHandHoraScrewDriver.yaml, xhand_hora.py _parse_hand_dof_props).
 XHAND_RIGHT_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
@@ -31,7 +31,7 @@ XHAND_RIGHT_CFG = ArticulationCfg(
         merge_fixed_joints=True,
         # gains: placeholder written into the USD, overwritten by the actuator cfg below at init
         joint_drive=UrdfConverterCfg.JointDriveCfg(
-            gains=UrdfConverterCfg.JointDriveCfg.PDGainsCfg(stiffness=3.0, damping=0.01)
+            gains=UrdfConverterCfg.JointDriveCfg.PDGainsCfg(stiffness=3.0, damping=0.1)
         ),
         activate_contact_sensors=False,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
@@ -80,7 +80,7 @@ XHAND_RIGHT_CFG = ArticulationCfg(
                 "right_hand_(index|mid|ring|pinky)_joint2": 0.4,
             },
             stiffness=3.0,
-            damping=0.01,
+            damping=0.1,  # Isaac Lab's Allegro value; dexscrew's 0.01 is for its explicit torque loop
             armature=0.001,
             friction=0.01,
         ),
