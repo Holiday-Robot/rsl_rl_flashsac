@@ -11,8 +11,8 @@
 
 """Observation term functions.
 
-Terms live in the :mod:`.locomotion` and :mod:`.motion` subpackages; import the one you need
+Terms live in the :mod:`.locomotion`, :mod:`.motion`, and :mod:`.inhand` subpackages; import the one you need
 (``from isaaclab_flashsac.mdp.obs import locomotion``). Nothing is re-exported here because
-:mod:`.motion` calls ``isaaclab.utils.math`` at runtime, and this package must stay importable
+:mod:`.motion` and :mod:`.inhand` call ``isaaclab.utils.math`` at runtime, and this package must stay importable
 without an Isaac Lab install.
 """

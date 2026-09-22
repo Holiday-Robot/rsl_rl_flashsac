@@ -101,3 +101,17 @@ if gym is not None:
         disable_env_checker=True,
         kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.franka_reach.env_cfg:Fr3ReachEnvCfg_PLAY"},
     )
+
+    gym.register(
+        id="Isaac-Repose-Cube-XHand-v0",
+        entry_point="isaaclab.envs:ManagerBasedRLEnv",
+        disable_env_checker=True,
+        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.xhand_repose.env_cfg:XHandReposeCubeEnvCfg"},
+    )
+
+    gym.register(
+        id="Isaac-Repose-Cube-XHand-Play-v0",
+        entry_point="isaaclab.envs:ManagerBasedRLEnv",
+        disable_env_checker=True,
+        kwargs={"env_cfg_entry_point": "isaaclab_flashsac.envs.xhand_repose.env_cfg:XHandReposeCubeEnvCfg_PLAY"},
+    )

@@ -490,6 +490,13 @@ class AllegroReposeCubeFlashSACCfg(FlashSACRunnerCfg):
 
 @register_task
 @configclass
+class XHandReposeCubeFlashSACCfg(FlashSACRunnerCfg):
+    task_name: str = "Isaac-Repose-Cube-XHand-v0"
+    obs_groups: dict = field(default_factory=lambda: {"actor": ["policy"], "critic": ["critic"]})
+
+
+@register_task
+@configclass
 class FrankaLiftCubeFlashSACCfg(FlashSACRunnerCfg):
     task_name: str = "Isaac-Lift-Cube-Franka-v0"
     action_bound_scale: float = 3.0

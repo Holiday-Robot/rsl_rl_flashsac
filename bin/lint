@@ -7,7 +7,7 @@ cd "$(dirname "$0")/.."
 # another project's environment. Override the location with FLASHSAC_VENV if needed.
 export UV_PROJECT_ENVIRONMENT="${FLASHSAC_VENV:-$PWD/.venv}"
 
-PKGS="rsl_rl_flashsac isaaclab_flashsac"
+PKGS="rsl_rl_flashsac isaaclab_flashsac tests"
 
 if [[ "${1:-}" == "--check" ]]; then
     uv run ruff format --check $PKGS
@@ -16,4 +16,4 @@ else
     uv run ruff format $PKGS
     uv run ruff check --fix $PKGS
 fi
-uv run mypy rsl_rl_flashsac isaaclab_flashsac
+uv run mypy rsl_rl_flashsac isaaclab_flashsac tests

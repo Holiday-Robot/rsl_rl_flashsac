@@ -86,6 +86,10 @@ Pose reaching on a Franka Research 3 (`Isaac-Reach-Franka-v0`): the stock Isaac 
   </tr>
 </table>
 
+### In-Hand Cube Reorientation (XHand1)
+
+Cube reorientation on the 12-DoF RoboEra XHand1 right hand (`Isaac-Repose-Cube-XHand-v0`): Isaac Lab's Repose-Cube task with delta joint-target actions, a non-privileged policy observation (noisy joint angles and palm-frame cube pose with history) and a privileged critic, and [dexscrew](https://github.com/x-robotics-lab/dexscrew)'s XHand1 physics parameters.
+
 ## Benchmark
 
 This implementation reproduces the official FlashSAC IsaacLab benchmark: 12 tasks (velocity locomotion, dexterous in-hand reposing, Franka manipulation) trained for 50M environment steps at 1024 parallel environments, using the single hyperparameter set shared across all tasks from the paper. 
