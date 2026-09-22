@@ -162,10 +162,15 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
         self.scene.object.spawn.mass_props = sim_utils.MassPropertiesCfg(mass=0.024)  # kg, fixed in training
         self.scene.object.init_state.pos = (0.07, 0.005, 0.56)  # env frame, m
 
-        # -- goal: resting center = palm plane 0.525 m + half edge; 0.2 rad is Allegro's tolerance (Shadow uses 0.1).
-        # The debug visualization draws the goal cube plus axis frames on the object and the goal
-        self.commands.object_pose = commands.ReorientWithFramesCommandCfg(
+        # -- goal: 90 deg about the palm normal from the current orientation, shifting on success. The 12-DoF
+        # XHand cannot reach arbitrary SO(3) goals (arXiv 2601.02778). Resting center = palm plane 0.525 m +
+        # half edge; 0.2 rad is Allegro's tolerance (Shadow uses 0.1). The debug visualization draws the goal
+        # cube plus axis frames on the object and the goal
+        self.commands.object_pose = commands.RotateAboutAxisCommandCfg(
             asset_name="object",
+            robot_name="robot",
+            axis=(0.0, 1.0, 0.0),  # hand root frame: +y is the palm normal
+            angle=math.pi / 2,
             init_pos_offset=(0.0, 0.0, -0.0145),
             update_goal_on_success=True,
             orientation_success_threshold=0.2,

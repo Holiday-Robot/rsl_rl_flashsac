@@ -2,11 +2,15 @@
 # All rights reserved.
 # Licensed under BSD-3-Clause.
 
-"""In-hand reorientation command whose debug visualization adds RGB axis frames to the object and the goal."""
+"""In-hand reorientation commands: axis frames in the debug visualization, and a fixed-axis shifting goal."""
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from dataclasses import MISSING
+
 import isaaclab.sim as sim_utils
+import isaaclab.utils.math as math_utils
 import torch
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
 from isaaclab.utils import configclass
@@ -59,3 +63,42 @@ class ReorientWithFramesCommandCfg(InHandReOrientationCommandCfg):
         },
     )
     """The axis-frame marker drawn on the object and on the goal marker (x red, y green, z blue)."""
+
+
+class RotateAboutAxisCommand(ReorientWithFramesCommand):
+    """Goal = the object's current orientation rotated by ``angle`` about a palm-frame axis.
+
+    Reached goals shift another ``angle`` along the same axis, so the policy learns continuous
+    finger gaiting about one axis (arXiv 2601.02778, "Constrained Rotation for Focused Learning").
+    """
+
+    cfg: RotateAboutAxisCommandCfg
+
+    def _resample_command(self, env_ids: Sequence[int]):
+        axis_palm = torch.tensor(self.cfg.axis, device=self.device).expand(len(env_ids), 3)
+        axis_w = math_utils.quat_apply(self.robot.data.root_quat_w[env_ids], axis_palm)
+        angle = torch.full((len(env_ids),), self.cfg.angle, device=self.device)
+        quat = math_utils.quat_mul(
+            math_utils.quat_from_angle_axis(angle, axis_w), self.object.data.root_quat_w[env_ids]
+        )
+        self.quat_command_w[env_ids] = math_utils.quat_unique(quat) if self.cfg.make_quat_unique else quat
+
+    @property
+    def robot(self):
+        return self._env.scene[self.cfg.robot_name]
+
+
+@configclass
+class RotateAboutAxisCommandCfg(ReorientWithFramesCommandCfg):
+    """Configuration for :class:`RotateAboutAxisCommand`."""
+
+    class_type: type = RotateAboutAxisCommand
+
+    robot_name: str = MISSING  # type: ignore[assignment]
+    """The hand; its root link frame defines ``axis``."""
+
+    axis: tuple[float, float, float] = MISSING  # type: ignore[assignment]
+    """Rotation axis in the hand root frame, unit vector."""
+
+    angle: float = MISSING  # type: ignore[assignment]
+    """Rotation from the current object orientation to the goal, rad."""
