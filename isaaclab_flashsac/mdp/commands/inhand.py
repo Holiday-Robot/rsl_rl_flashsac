@@ -66,17 +66,21 @@ class ReorientWithFramesCommandCfg(InHandReOrientationCommandCfg):
 
 
 class RotateAboutAxisCommand(ReorientWithFramesCommand):
-    """Goal = the object's current orientation rotated by ``angle`` about a palm-frame axis.
+    """Goal = the object's current orientation rotated by ``angle`` about an axis.
 
-    Reached goals shift another ``angle`` along the same axis, so the policy learns continuous
-    finger gaiting about one axis (arXiv 2601.02778, "Constrained Rotation for Focused Learning").
+    The axis is fixed in the palm frame, or a fresh random direction per goal. Reached goals shift
+    another ``angle``, so the policy learns continuous finger gaiting rather than one static
+    reorientation (arXiv 2601.02778, "Constrained Rotation for Focused Learning").
     """
 
     cfg: RotateAboutAxisCommandCfg
 
     def _resample_command(self, env_ids: Sequence[int]):
-        axis_palm = torch.tensor(self.cfg.axis, device=self.device).expand(len(env_ids), 3)
-        axis_w = math_utils.quat_apply(self.robot.data.root_quat_w[env_ids], axis_palm)
+        if self.cfg.axis is None:
+            axis_w = torch.nn.functional.normalize(torch.randn((len(env_ids), 3), device=self.device), dim=-1)
+        else:
+            axis_palm = torch.tensor(self.cfg.axis, device=self.device).expand(len(env_ids), 3)
+            axis_w = math_utils.quat_apply(self.robot.data.root_quat_w[env_ids], axis_palm)
         angle = torch.full((len(env_ids),), self.cfg.angle, device=self.device)
         quat = math_utils.quat_mul(
             math_utils.quat_from_angle_axis(angle, axis_w), self.object.data.root_quat_w[env_ids]
@@ -97,8 +101,8 @@ class RotateAboutAxisCommandCfg(ReorientWithFramesCommandCfg):
     robot_name: str = MISSING  # type: ignore[assignment]
     """The hand; its root link frame defines ``axis``."""
 
-    axis: tuple[float, float, float] = MISSING  # type: ignore[assignment]
-    """Rotation axis in the hand root frame, unit vector."""
+    axis: tuple[float, float, float] | None = MISSING  # type: ignore[assignment]
+    """Rotation axis in the hand root frame, unit vector. None draws a uniformly random direction per goal."""
 
     angle: float = MISSING  # type: ignore[assignment]
     """Rotation from the current object orientation to the goal, rad."""
