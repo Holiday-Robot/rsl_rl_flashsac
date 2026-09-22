@@ -11,12 +11,13 @@
 
 """Event (domain randomization) term functions.
 
-- :mod:`.domain_rand`: WBT randomizations of the joint default positions and rigid-body
-  center of mass.
+Re-exports ``isaaclab.envs.mdp.events`` so an env_cfg reaches every event term through this one
+module; the terms defined here shadow upstream ones of the same name.
 
-Event functions already provided by ``isaaclab.envs.mdp`` (``randomize_rigid_body_material``,
-``push_by_setting_velocity``, ...) are used directly from env_cfg.py and are not duplicated here.
+- :mod:`.domain_rand`: joint default position and rigid-body center-of-mass randomization.
 """
+
+from isaaclab.envs.mdp.events import *  # noqa: F401, F403
 
 from isaaclab_flashsac.mdp.events.domain_rand import randomize_joint_default_pos, randomize_rigid_body_com
 

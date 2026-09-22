@@ -26,8 +26,8 @@ from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as Gnoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab_tasks.manager_based.manipulation.inhand.inhand_env_cfg import InHandObjectEnvCfg
 
-from isaaclab_flashsac.mdp import events as flashsac_events
-from isaaclab_flashsac.mdp.obs import inhand as inhand_obs
+from isaaclab_flashsac.mdp import events
+from isaaclab_flashsac.mdp.obs import inhand
 
 from .assets import XHAND_RIGHT_CFG
 
@@ -58,12 +58,12 @@ class XHandObservationsCfg:
         # Order is the deploy contract - do not reorder. Noise and injection follow wuji-mjlab.
         joint_pos = ObsTerm(func=mdp.joint_pos_limit_normalized, noise=Unoise(n_min=-0.06, n_max=0.06))
         object_pos = ObsTerm(
-            func=inhand_obs.object_pos_in_palm,
+            func=inhand.object_pos_in_palm,
             noise=Unoise(n_min=-0.008, n_max=0.008),
             params={"injection_prob": 0.02},
         )
         goal_orientation_error = ObsTerm(
-            func=inhand_obs.goal_orientation_error_6d,
+            func=inhand.goal_orientation_error_6d,
             noise=Gnoise(std=0.05),
             params={"command_name": "object_pose", "injection_prob": 0.02},
         )
@@ -79,15 +79,15 @@ class XHandObservationsCfg:
     class CriticCfg(ObsGroup):
         joint_pos = ObsTerm(func=mdp.joint_pos_limit_normalized)
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, scale=0.2)
-        object_pos = ObsTerm(func=inhand_obs.object_pos_in_palm, params={"injection_prob": 0.0})
+        object_pos = ObsTerm(func=inhand.object_pos_in_palm, params={"injection_prob": 0.0})
         goal_orientation_error = ObsTerm(
-            func=inhand_obs.goal_orientation_error_6d,
+            func=inhand.goal_orientation_error_6d,
             params={"command_name": "object_pose", "injection_prob": 0.0},
         )
         object_lin_vel = ObsTerm(func=mdp.root_lin_vel_w, params={"asset_cfg": SceneEntityCfg("object")})
         object_ang_vel = ObsTerm(func=mdp.root_ang_vel_w, scale=0.2, params={"asset_cfg": SceneEntityCfg("object")})
         fingertip_pos = ObsTerm(
-            func=inhand_obs.body_pos_in_palm,
+            func=inhand.body_pos_in_palm,
             params={"asset_cfg": SceneEntityCfg("robot", body_names=FINGERTIP_BODY_NAMES)},
         )
         last_action = ObsTerm(func=mdp.last_action)
@@ -143,7 +143,7 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
         # per-env scale needs individually parsed objects, and USD (not Fabric) clones to edit
         self.scene.replicate_physics = False
         self.events.object_scale = EventTerm(
-            func=mdp.randomize_rigid_body_scale,
+            func=events.randomize_rigid_body_scale,
             mode="prestartup",
             params={
                 "asset_cfg": SceneEntityCfg("object"),
@@ -151,7 +151,7 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
             },
         )
         self.events.object_com = EventTerm(
-            func=flashsac_events.randomize_rigid_body_com,  # Isaac Lab's is articulation-only
+            func=events.randomize_rigid_body_com,
             mode="startup",
             params={
                 "asset_cfg": SceneEntityCfg("object"),
