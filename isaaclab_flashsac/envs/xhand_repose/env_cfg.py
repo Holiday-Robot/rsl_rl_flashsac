@@ -20,6 +20,7 @@ from isaaclab.assets import AssetBaseCfg
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as Gnoise
@@ -101,6 +102,33 @@ class XHandObservationsCfg:
 
 
 ##
+# Rewards
+##
+
+
+@configclass
+class XHandRewardsCfg:
+    """Isaac Lab's in-hand reorientation reward set, values unchanged. Tune here."""
+
+    # -- task
+    track_orientation_inv_l2 = RewTerm(
+        func=mdp.track_orientation_inv_l2,
+        weight=1.0,
+        params={"object_cfg": SceneEntityCfg("object"), "rot_eps": 0.1, "command_name": "object_pose"},
+    )
+    success_bonus = RewTerm(
+        func=mdp.success_bonus,
+        weight=250.0,
+        params={"object_cfg": SceneEntityCfg("object"), "command_name": "object_pose"},
+    )
+
+    # -- penalties
+    joint_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-2.5e-5)
+    action_l2 = RewTerm(func=mdp.action_l2, weight=-0.0001)
+    action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+
+
+##
 # Environment configurations
 ##
 
@@ -110,6 +138,7 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
     """Isaac Lab's in-hand reorientation task on the XHand1 with a non-privileged actor and delta actions."""
 
     observations: XHandObservationsCfg = XHandObservationsCfg()
+    rewards: XHandRewardsCfg = XHandRewardsCfg()
 
     def __post_init__(self):
         super().__post_init__()
