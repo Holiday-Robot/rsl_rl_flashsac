@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import MISSING
 
 import torch
 from isaaclab.envs.mdp.actions.actions_cfg import JointActionCfg
@@ -23,6 +24,10 @@ class DeltaJointPositionAction(JointAction):
 
     Isaac Lab's :class:`RelativeJointPositionAction` integrates the *measured* position instead, so the
     command can never lead it by more than one step and the joint torque is capped at ``kp * s``.
+
+    ``max_command_lead`` bounds how far the command may run ahead of the measured position, which caps the
+    torque at ``kp * max_command_lead``. Without it the command winds up against a finger the object blocks
+    and the hand throws the object: every episode of a 100k run ended in a drop.
     """
 
     cfg: DeltaJointPositionActionCfg
@@ -42,7 +47,11 @@ class DeltaJointPositionAction(JointAction):
     def process_actions(self, actions: torch.Tensor):
         """Integrate the command once per control step (``apply_actions`` runs per physics step)."""
         super().process_actions(actions)
-        self._command = torch.clamp(self._command + self._processed_actions, self._lower, self._upper)
+        command = self._command + self._processed_actions
+        measured = self._asset.data.joint_pos[:, self._joint_ids]
+        lead = self.cfg.max_command_lead
+        command = torch.clamp(command, measured - lead, measured + lead)
+        self._command = torch.clamp(command, self._lower, self._upper)
 
     def apply_actions(self):
         self._asset.set_joint_position_target(self._command, joint_ids=self._joint_ids)
@@ -58,3 +67,6 @@ class DeltaJointPositionActionCfg(JointActionCfg):
     """Configuration for :class:`DeltaJointPositionAction`; ``scale`` is the step size in rad."""
 
     class_type: type = DeltaJointPositionAction
+
+    max_command_lead: float = MISSING  # type: ignore[assignment]
+    """How far the command may lead the measured joint position, rad; it caps the torque at ``kp`` times this."""

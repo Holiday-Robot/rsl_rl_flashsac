@@ -227,6 +227,7 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
             asset_name="robot",
             joint_names=[".*"],
             scale=0.1,  # rad per 20 Hz control step
+            max_command_lead=0.2,  # rad, caps the joint torque at kp * 0.2
         )
 
 
