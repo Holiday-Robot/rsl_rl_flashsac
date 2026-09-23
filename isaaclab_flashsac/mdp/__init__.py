@@ -22,6 +22,7 @@ Subpackages are split by term kind, each grouped by role:
 - :mod:`isaaclab_flashsac.mdp.events`: domain-randomization event functions
   (``events/domain_rand.py``).
 - :mod:`isaaclab_flashsac.mdp.commands`: command terms (``commands/motion.py``).
+- :mod:`isaaclab_flashsac.mdp.actions`: action terms (``actions/delta_joint_position.py``).
 
 Each subpackage re-exports its functions, so an env_cfg can import one and use its terms flat
 (e.g. ``rewards.orthogonal_velocity_exp``, ``obs.locomotion.feet_contact``).
@@ -40,14 +41,15 @@ try:
     # cannot be imported without a real Isaac Lab install. Degrade gracefully so CPU-only
     # dev/test environments (no isaaclab) can still import isaaclab_flashsac.mdp.obs.* (e.g. the
     # left-right symmetry transforms), which need no isaaclab at all.
-    from isaaclab_flashsac.mdp import commands, events, rewards, terminations
+    from isaaclab_flashsac.mdp import actions, commands, events, rewards, terminations
 except ModuleNotFoundError as exc:
     # Only degrade when Isaac Lab itself is absent; a genuine bug inside them must surface.
     if not _isaaclab_missing(exc):
         raise
+    actions = None  # type: ignore[assignment]
     commands = None  # type: ignore[assignment]
     events = None  # type: ignore[assignment]
     rewards = None  # type: ignore[assignment]
     terminations = None  # type: ignore[assignment]
 
-__all__ = ["commands", "events", "obs", "rewards", "terminations"]
+__all__ = ["actions", "commands", "events", "obs", "rewards", "terminations"]
