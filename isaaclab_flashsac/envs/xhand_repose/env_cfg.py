@@ -125,8 +125,8 @@ class XHandRewardsCfg:
     # -- penalties
     # 100x upstream: at -2.5e-5 the velocity penalty cost 0.002 of a 69 return
     joint_vel_l2 = RewTerm(func=mdp.joint_vel_l2, weight=-2.5e-3)
-    # mechanical power ||tau * qdot||, about 5 % of the return at the measured 0.34 N m and 3.4 rad/s
-    joint_power = RewTerm(func=rewards.energy, weight=-5e-3)
+    # mechanical power ||tau * qdot||; -5e-3 cost 0.03 of a 65 return, so 100x to reach about 3 %
+    joint_power = RewTerm(func=rewards.energy, weight=-0.5)
     action_l2 = RewTerm(func=mdp.action_l2, weight=-0.0001)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
     # dropping the cube costs one success bonus; timeouts are not penalized
