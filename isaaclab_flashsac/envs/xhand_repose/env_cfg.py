@@ -181,7 +181,8 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
             asset_name="object",
             robot_name="robot",
             axis=None,  # a new random direction per goal; (0, 1, 0) would be the palm normal
-            angle=math.pi / 2,
+            angle_range=(math.pi / 9, math.pi / 2),  # 20 deg up to 90 deg, per env
+            angle_step=0.05,  # rad added per goal reached
             init_pos_offset=(0.0, 0.0, -0.0145),
             update_goal_on_success=True,
             orientation_success_threshold=0.2,

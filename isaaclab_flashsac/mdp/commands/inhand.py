@@ -71,9 +71,28 @@ class RotateAboutAxisCommand(ReorientWithFramesCommand):
     The axis is fixed in the palm frame, or a fresh random direction per goal. Reached goals shift
     another ``angle``, so the policy learns continuous finger gaiting rather than one static
     reorientation (arXiv 2601.02778, "Constrained Rotation for Focused Learning").
+
+    Each environment carries its own angle, which grows by ``angle_step`` every time it reaches a goal
+    and never shrinks: a 90 deg goal from the start left the delta-action policies at zero successes,
+    and POISE (arXiv 2609.13761) reports 6.2 % without its goal-range curriculum against 59.5 % with it.
     """
 
     cfg: RotateAboutAxisCommandCfg
+
+    def __init__(self, cfg: RotateAboutAxisCommandCfg, env):
+        super().__init__(cfg, env)
+        # per-env goal angle, rad; starts at the easy end of the range
+        self._angle = torch.full((self.num_envs,), cfg.angle_range[0], device=self.device)
+        # a copy: the base class zeroes every metric on reset, and the curriculum has to survive that
+        self.metrics["goal_angle"] = self._angle.clone()
+
+    def _update_command(self):
+        reached = self.metrics["orientation_error"] < self.cfg.orientation_success_threshold
+        self._angle = torch.where(reached, self._angle + self.cfg.angle_step, self._angle).clamp(
+            max=self.cfg.angle_range[1]
+        )
+        self.metrics["goal_angle"][:] = self._angle
+        super()._update_command()
 
     def _resample_command(self, env_ids: Sequence[int]):
         if self.cfg.axis is None:
@@ -81,7 +100,7 @@ class RotateAboutAxisCommand(ReorientWithFramesCommand):
         else:
             axis_palm = torch.tensor(self.cfg.axis, device=self.device).expand(len(env_ids), 3)
             axis_w = math_utils.quat_apply(self.robot.data.root_quat_w[env_ids], axis_palm)
-        angle = torch.full((len(env_ids),), self.cfg.angle, device=self.device)
+        angle = self._angle[env_ids]
         quat = math_utils.quat_mul(
             math_utils.quat_from_angle_axis(angle, axis_w), self.object.data.root_quat_w[env_ids]
         )
@@ -104,5 +123,8 @@ class RotateAboutAxisCommandCfg(ReorientWithFramesCommandCfg):
     axis: tuple[float, float, float] | None = MISSING  # type: ignore[assignment]
     """Rotation axis in the hand root frame, unit vector. None draws a uniformly random direction per goal."""
 
-    angle: float = MISSING  # type: ignore[assignment]
-    """Rotation from the current object orientation to the goal, rad."""
+    angle_range: tuple[float, float] = MISSING  # type: ignore[assignment]
+    """Goal rotation from the object's current orientation, rad: the starting angle and the ceiling."""
+
+    angle_step: float = MISSING  # type: ignore[assignment]
+    """How much an environment's goal angle grows each time it reaches a goal, rad."""

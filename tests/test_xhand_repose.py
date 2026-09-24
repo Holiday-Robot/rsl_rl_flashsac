@@ -27,7 +27,7 @@ def test_rotation_error_6d_is_identity_when_aligned(palm: list[float]) -> None:
     assert torch.allclose(error, torch.tensor([[0.0, 1.0, 0.0, 0.0, 0.0, 1.0]]), atol=1e-6)
 
 
-def test_rotate_about_axis_goal_is_90deg_away() -> None:
+def test_rotate_about_axis_goal_starts_at_the_easy_angle() -> None:
     import gymnasium as gym
     from isaaclab.utils.math import axis_angle_from_quat, quat_apply_inverse, quat_conjugate, quat_mul
     from isaaclab_tasks.utils import parse_env_cfg
@@ -41,10 +41,12 @@ def test_rotate_about_axis_goal_is_90deg_away() -> None:
     command = base.command_manager.get_term("object_pose")
     palm_quat = base.scene["robot"].data.root_quat_w
     object_quat = base.scene["object"].data.root_quat_w
-    # goal * object^-1 as a rotation vector in the palm frame: 90 deg about a different axis per env
+    # goal * object^-1 as a rotation vector in the palm frame: the curriculum's first angle, a
+    # different axis per env
+    start_angle = base.cfg.commands.object_pose.angle_range[0]
     rotvec = quat_apply_inverse(
         palm_quat, axis_angle_from_quat(quat_mul(command.quat_command_w, quat_conjugate(object_quat)))
     )
     env.close()
-    assert torch.allclose(rotvec.norm(dim=-1), torch.full((4,), torch.pi / 2, device=rotvec.device), atol=1e-3)
+    assert torch.allclose(rotvec.norm(dim=-1), torch.full((4,), start_angle, device=rotvec.device), atol=1e-3)
     assert not torch.allclose(rotvec[0], rotvec[1], atol=1e-2)
