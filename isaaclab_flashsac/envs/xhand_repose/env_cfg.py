@@ -27,7 +27,7 @@ from isaaclab.utils.noise import AdditiveGaussianNoiseCfg as Gnoise
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab_tasks.manager_based.manipulation.inhand.inhand_env_cfg import InHandObjectEnvCfg
 
-from isaaclab_flashsac.mdp import actions, commands, events, rewards
+from isaaclab_flashsac.mdp import commands, events, rewards
 from isaaclab_flashsac.mdp.obs import inhand
 
 from .assets import XHAND_RIGHT_CFG
@@ -181,8 +181,8 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
             asset_name="object",
             robot_name="robot",
             axis=None,  # a new random direction per goal; (0, 1, 0) would be the palm normal
-            angle_range=(math.pi / 9, math.pi / 2),  # 20 deg up to 90 deg, per env
-            angle_step=0.05,  # rad added per goal reached
+            angle_range=(math.pi / 2, math.pi / 2),  # fixed 90 deg; the curriculum was for the delta action
+            angle_step=0.0
             init_pos_offset=(0.0, 0.0, -0.0145),
             update_goal_on_success=True,
             orientation_success_threshold=0.2,
@@ -225,14 +225,11 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
             "yaw": (-math.pi, math.pi),
         }
 
-        # -- action: the command integrates the action, clipped to the joint limits (POISE, arXiv 2609.13761).
-        # Isaac Lab's relative term integrates the measured position instead, which caps the torque at kp * scale
-        self.actions.joint_pos = actions.DeltaJointPositionActionCfg(
-            asset_name="robot",
-            joint_names=[".*"],
-            scale=0.1,  # rad per 20 Hz control step
-            max_command_lead=0.2,  # rad, caps the joint torque at kp * 0.2
-        )
+        # -- action: upstream EMAJointPositionToLimits (absolute targets over the joint range).
+        # alpha 0.5 instead of upstream's 0.95: at 0.95 the target jumped up to 2.45 rad per 50 ms step,
+        # more than the 1.9 rad joint range, and the joints ran into their 14.4 rad/s ceiling. Integrating
+        # the command instead (POISE's delta action) never turned the cube: 30 configs, zero successes
+        self.actions.joint_pos.alpha = 0.5
 
 
 @configclass
