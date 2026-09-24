@@ -58,6 +58,8 @@ class XHandObservationsCfg:
     class PolicyCfg(ObsGroup):
         # Order is the deploy contract - do not reorder. Noise and injection follow wuji-mjlab.
         joint_pos = ObsTerm(func=mdp.joint_pos_limit_normalized, noise=Unoise(n_min=-0.06, n_max=0.06))
+        # the action term integrates this command, so the policy has to see it (POISE, arXiv 2609.13761)
+        joint_command = ObsTerm(func=inhand.joint_command_limit_normalized, params={"action_name": "joint_pos"})
         object_pos = ObsTerm(
             func=inhand.object_pos_in_palm,
             noise=Unoise(n_min=-0.008, n_max=0.008),
@@ -79,6 +81,7 @@ class XHandObservationsCfg:
     @configclass
     class CriticCfg(ObsGroup):
         joint_pos = ObsTerm(func=mdp.joint_pos_limit_normalized)
+        joint_command = ObsTerm(func=inhand.joint_command_limit_normalized, params={"action_name": "joint_pos"})
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, scale=0.2)
         object_pos = ObsTerm(func=inhand.object_pos_in_palm, params={"injection_prob": 0.0})
         goal_orientation_error = ObsTerm(

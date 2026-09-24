@@ -62,6 +62,27 @@ def goal_orientation_error_6d(
     return _inject(error, random_error, injection_prob)
 
 
+def joint_command_limit_normalized(
+    env: ManagerBasedRLEnv,
+    action_name: str,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+) -> torch.Tensor:
+    """The joint position command the action term holds, normalized to [-1, 1] over the soft joint limits.
+
+    A command-integrating action term (:class:`DeltaJointPositionAction`) carries the integral as state the
+    policy cannot otherwise see; POISE (arXiv 2609.13761) feeds both measured and commanded positions.
+
+    Args:
+        env: The environment instance.
+        action_name: The action term holding the command.
+        asset_cfg: The articulation whose soft limits normalize it.
+    """
+    asset = env.scene[asset_cfg.name]
+    command = env.action_manager.get_term(action_name).processed_actions
+    lower, upper = asset.data.soft_joint_pos_limits[..., 0], asset.data.soft_joint_pos_limits[..., 1]
+    return (2.0 * command - upper - lower) / (upper - lower)
+
+
 def body_pos_in_palm(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     """Selected body positions in the palm frame, m, flattened to ``(num_envs, 3 * num_bodies)``.
 

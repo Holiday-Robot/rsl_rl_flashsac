@@ -11,8 +11,15 @@ Like :mod:`..motion`, these call ``isaaclab.utils.math`` at runtime and are not 
 from isaaclab_flashsac.mdp.obs.inhand.palm_frame import (
     body_pos_in_palm,
     goal_orientation_error_6d,
+    joint_command_limit_normalized,
     object_pos_in_palm,
     rotation_error_6d,
 )
 
-__all__ = ["body_pos_in_palm", "goal_orientation_error_6d", "object_pos_in_palm", "rotation_error_6d"]
+__all__ = [
+    "body_pos_in_palm",
+    "goal_orientation_error_6d",
+    "joint_command_limit_normalized",
+    "object_pos_in_palm",
+    "rotation_error_6d",
+]
