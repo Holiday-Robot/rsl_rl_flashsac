@@ -182,7 +182,7 @@ class XHandReposeCubeEnvCfg(InHandObjectEnvCfg):
             robot_name="robot",
             axis=None,  # a new random direction per goal; (0, 1, 0) would be the palm normal
             angle_range=(math.pi / 2, math.pi / 2),  # fixed 90 deg; the curriculum was for the delta action
-            angle_step=0.0
+            angle_step=0.0,
             init_pos_offset=(0.0, 0.0, -0.0145),
             update_goal_on_success=True,
             orientation_success_threshold=0.2,
