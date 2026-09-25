@@ -26,8 +26,7 @@ class DeltaJointPositionAction(JointAction):
     command can never lead it by more than one step and the joint torque is capped at ``kp * s``.
 
     ``max_command_lead`` bounds how far the command may run ahead of the measured position, which caps the
-    torque at ``kp * max_command_lead``. Without it the command winds up against a finger the object blocks
-    and the hand throws the object: every episode of a 100k run ended in a drop.
+    torque at ``kp * max_command_lead``; ``None`` keeps only the joint limits, as POISE has it.
     """
 
     cfg: DeltaJointPositionActionCfg
@@ -48,9 +47,10 @@ class DeltaJointPositionAction(JointAction):
         """Integrate the command once per control step (``apply_actions`` runs per physics step)."""
         super().process_actions(actions)
         command = self._command + self._processed_actions
-        measured = self._asset.data.joint_pos[:, self._joint_ids]
-        lead = self.cfg.max_command_lead
-        command = torch.clamp(command, measured - lead, measured + lead)
+        if self.cfg.max_command_lead is not None:
+            measured = self._asset.data.joint_pos[:, self._joint_ids]
+            lead = self.cfg.max_command_lead
+            command = torch.clamp(command, measured - lead, measured + lead)
         self._command = torch.clamp(command, self._lower, self._upper)
 
     def apply_actions(self):
@@ -68,5 +68,6 @@ class DeltaJointPositionActionCfg(JointActionCfg):
 
     class_type: type = DeltaJointPositionAction
 
-    max_command_lead: float = MISSING  # type: ignore[assignment]
-    """How far the command may lead the measured joint position, rad; it caps the torque at ``kp`` times this."""
+    max_command_lead: float | None = MISSING  # type: ignore[assignment]
+    """How far the command may lead the measured joint position, rad; it caps the torque at ``kp`` times
+    this. ``None`` leaves the command bounded only by the joint limits, as POISE has it."""
