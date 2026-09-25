@@ -12,7 +12,8 @@ dependencies = [
     "rsl-rl-lib==5.4.2",
     "torch>=2.5",
     "tensordict>=0.13",
-    "wandb>=0.19",
+    # pin: rsl-rl 5.4.2 calls wandb.Settings(start_method=...), which wandb 0.30 rejects
+    "wandb==0.28.1",
     # deploy_export.py writes the exported policy's config.yaml
     "pyyaml>=6.0",
 ]
