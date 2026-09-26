@@ -35,13 +35,15 @@ class DeltaJointPositionAction(JointAction):
         super().__init__(cfg, env)
         # joint position command, rad; reset to the measured position
         self._command = torch.zeros(self.num_envs, self.action_dim, device=self.device)
+        # what the articulation tracks: the command, or an EMA of it when ema_alpha is set
+        self._applied = torch.zeros_like(self._command)
         soft_limits = self._asset.data.soft_joint_pos_limits[:, self._joint_ids]
         self._lower, self._upper = soft_limits[..., 0], soft_limits[..., 1]
 
     @property
     def processed_actions(self) -> torch.Tensor:
         """The joint position command the articulation is tracking, rad."""
-        return self._command
+        return self._applied
 
     def process_actions(self, actions: torch.Tensor):
         """Integrate the command once per control step (``apply_actions`` runs per physics step)."""
@@ -52,14 +54,17 @@ class DeltaJointPositionAction(JointAction):
             lead = self.cfg.max_command_lead
             command = torch.clamp(command, measured - lead, measured + lead)
         self._command = torch.clamp(command, self._lower, self._upper)
+        alpha = self.cfg.ema_alpha
+        self._applied = self._command if alpha is None else alpha * self._command + (1.0 - alpha) * self._applied
 
     def apply_actions(self):
-        self._asset.set_joint_position_target(self._command, joint_ids=self._joint_ids)
+        self._asset.set_joint_position_target(self._applied, joint_ids=self._joint_ids)
 
     def reset(self, env_ids: Sequence[int] | None = None) -> None:
         super().reset(env_ids)
         ids = slice(None) if env_ids is None else env_ids
         self._command[ids] = self._asset.data.joint_pos[ids][:, self._joint_ids]
+        self._applied[ids] = self._command[ids]
 
 
 @configclass
@@ -67,6 +72,10 @@ class DeltaJointPositionActionCfg(JointActionCfg):
     """Configuration for :class:`DeltaJointPositionAction`; ``scale`` is the step size in rad."""
 
     class_type: type = DeltaJointPositionAction
+
+    ema_alpha: float | None = MISSING  # type: ignore[assignment]
+    """Weight of the new command in the exponential moving average the joints track; ``None`` tracks the
+    command directly. The absolute action term smooths this way and it is what delta lacked."""
 
     max_command_lead: float | None = MISSING  # type: ignore[assignment]
     """How far the command may lead the measured joint position, rad; it caps the torque at ``kp`` times
